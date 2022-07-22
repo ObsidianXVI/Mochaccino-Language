@@ -14,5 +14,6 @@ A directory with the following structure is created:
         🗎 main.mocc
     🗀 tests
     🗀 scripts
+    🗀 docs
     🗎 caffeine.json
 ```

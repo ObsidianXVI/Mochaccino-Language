@@ -1,0 +1,25 @@
+package main;
+
+include io;
+include http;
+
+factory dart;
+
+dock {
+    Drink from "./lib/drink.mocc";
+}
+
+struct Coffee extends Drink {
+
+}
+
+func main()<void> {
+    var c<Coffee> = {}::Coffee; // links c to the mutable primitive
+    var d<Coffee> = {}:Coffee; // links d to the primitive's current state
+    var e<Coffee>;
+    @dart {
+        // use Mochaccino syntax, but also reference Dart classes and functions
+        // DartClass and DartMethod are defined in dart_factory.dart
+        e = DartClass.DartMethod("arg");
+    }
+}
