@@ -1,3 +1,3 @@
-int calculate() {
-  return 6 * 7;
-}
+library mochaccino.sdk;
+
+export './compiler/compiler.dart';
