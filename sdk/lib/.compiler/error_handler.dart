@@ -53,12 +53,10 @@ class Issue {
 
   String get consoleString {
     return """
-  ${issueType.toString().replaceAll("IssueType.", "")}: $title
-
-                  in [$filePath]:
-                    $lineNo| $offendingLine
-
-              $description
+${issueType.toString().replaceAll("IssueType.", "")}: $title
+  in [$filePath]:
+    $lineNo| $offendingLine
+$description
 """;
   }
 }
@@ -68,8 +66,7 @@ class ErrorHandler {
 
   static void reportAll([IssueReporter issueReporter = IssueReporter.console]) {
     if (issueReporter == IssueReporter.console) {
-      issues.forEach((Issue issue) =>
-          Interface.writeErr(issue.consoleString, Source.interpreter));
+      issues.forEach((Issue issue) => print(issue.consoleString));
     }
   }
 }

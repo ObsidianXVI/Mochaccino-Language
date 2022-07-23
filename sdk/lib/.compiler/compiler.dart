@@ -1,8 +1,6 @@
 library mochaccino.sdk.compiler;
 
 import 'dart:io';
-import 'package:barista/interface/interface.dart';
-
 import './runtime/runtime.dart';
 
 part './tokeniser.dart';
@@ -15,53 +13,26 @@ class Compiler {
 
   Compiler(this.source);
 
-  void compile([bool debugMode = false]) {
-    Interface.writeLog("COMPILING", Source.compiler);
-    final Stopwatch stopwatch = Stopwatch()..start();
+  void compile([bool debugMode = false]) {}
+
+  void compilex([bool debugMode = false]) {
     MochaccinoRuntime.sourceLines = source.split('\n');
 
-    final InterfaceProcess tokenisingProc = InterfaceProcess("Tokenising...")
-      ..start();
     Tokeniser tokeniser = Tokeniser(source);
     List<Token> tokens = tokeniser.tokenise();
-    tokenisingProc.complete();
-    if (debugMode) {
-      tokens.forEach((Token token) {
-        Interface.writeLog('    ${token.toString()}', Source.compiler);
-      });
-    }
+    if (debugMode) tokens.forEach(print);
 
-    final InterfaceProcess parsingProc = InterfaceProcess("Parsing...")
-      ..start();
     Parser parser = Parser(tokens, source.split('\n'));
     List<Statement> statements = parser.parse();
-    parsingProc.complete();
-    if (debugMode)
-      statements.forEach(
-          (Statement s) => Interface.writeLog(s.toTree(0), Source.compiler));
+    if (debugMode) statements.forEach((Statement s) => print(s.toTree(0)));
 
-    final InterfaceProcess interpretingProc =
-        InterfaceProcess("Interpreting...")..start();
     Interpreter interpreter = Interpreter(statements, source.split('\n'));
     interpreter.interpret();
 
     if (ErrorHandler.issues.isNotEmpty) {
-      interpretingProc.complete(false);
       ErrorHandler.reportAll();
-      Interface.writeInfo(
-        "Completed in ${stopwatch.elapsedMilliseconds}ms with ${ErrorHandler.issues.length} issues",
-        Source.compiler,
-      );
-      stopwatch.stop();
       exit(1);
-    } else {
-      interpretingProc.complete();
     }
-    Interface.writeInfo(
-      "Completed in ${stopwatch.elapsedMilliseconds}ms with ${ErrorHandler.issues.length} issues",
-      Source.compiler,
-    );
-    stopwatch.stop();
   }
 }
 
@@ -71,12 +42,15 @@ void main(List<String> args) {
   String source = File("/workspaces/Mochaccino-Language/sdk/test/simple.mocc")
       .readAsStringSync();
   Compiler cortado = Compiler(source);
+  if (debugMode) print('Compiling:\n$source\n');
   cortado.compile(debugMode);
+  if (debugMode)
+    print(
+        "Compiled ${ErrorHandler.issues.isEmpty ? 'successfully' : 'unsuccessfully with ${ErrorHandler.issues.length} issues'}");
 }
 
 extension StringUtils on String {
-  String indent(int indent, [String indentStr = '-']) =>
-      "|" + (indentStr * indent) + this;
+  String indent(int indent) => "|" + ("-" * indent) + this;
   String newline(String text) => this + "\n" + text;
   bool get isNewline => (this == '\n');
   bool get isEOF => (this == 'EOF');
