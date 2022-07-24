@@ -1,3 +1,3 @@
 library mochaccino.sdk;
 
-export './compiler/compiler.dart';
+export './compiler/compiler_entry.dart';

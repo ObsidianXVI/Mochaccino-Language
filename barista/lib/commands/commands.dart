@@ -18,8 +18,10 @@ class Commands {
           Source.barista,
         );
       }
-      BaristaProcess proc = BaristaProcess('Creating project files...')
-        ..start();
+      BaristaProcess proc = BaristaProcess(
+        'Creating project files...',
+        Source.barista,
+      )..start();
       Directory projDir = await Directory('./$projName').create();
       Directory('./$projName/bin').create();
       Directory('./$projName/src').create();

@@ -1,15 +1,37 @@
-library mochaccino.sdk.compiler;
+part of mochaccino.sdk.compiler;
 
-import 'package:barista/interface/interface.dart';
+class CompileJob {
+  final String source;
+  const CompileJob(this.source);
+}
 
-import './runtime/runtime.dart';
+class CompileResult {
+  final List<ConsoleLog> logs;
+  const CompileResult(this.logs);
+}
 
-part './tokeniser.dart';
-part './parser.dart';
-part './interpreter.dart';
-part './error_handler.dart';
+abstract class CompileComponent {
+  const CompileComponent();
+}
 
-void main(List<String> args) {}
+class Compiler extends CompileComponent {
+  final CompileJob compileJob;
+
+  const Compiler(this.compileJob);
+
+  CompileResult compile() {
+    final CompileResult compileResult = CompileResult([]);
+    final Tokeniser tokeniser = Tokeniser(compileJob.source, compileResult);
+    final Parser parser = Parser(
+      tokeniser.tokenise(),
+      compileResult,
+      compileJob,
+    );
+    final Interpreter interpreter = Interpreter(parser.parse(), compileJob);
+    interpreter.interpret();
+    return compileResult;
+  }
+}
 
 extension StringUtils on String {
   String indent(int indent, [String indentStr = '-']) =>

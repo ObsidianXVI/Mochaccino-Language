@@ -27,6 +27,9 @@ On the note of modularity, Mochaccino has a `module` keyword.
 
 ## Structs
 
+## Context Flags
+A handwritten LL(2) parser offers a few advantages, one of which is full control over the compilation process. This means that tokens produced by the `Tokeniser` can have context attached to them, and this context can be passed to the `Interpreter`.
+
 ## Documentation Injection
 Ever seen code snippets like the one below?
 ```
