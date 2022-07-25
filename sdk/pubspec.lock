@@ -32,10 +32,10 @@ packages:
   barista:
     dependency: "direct main"
     description:
-      path: "../barista"
+      path: "lib/barista"
       relative: true
     source: path
-    version: "1.0.0"
+    version: "0.0.1"
   boolean_selector:
     dependency: transitive
     description:

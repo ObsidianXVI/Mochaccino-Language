@@ -1,6 +1,6 @@
-name: sdk
-description: A sample command-line application.
-version: 1.0.0
+name: mochaccino_sdk
+description: SDK for the Mochaccino language.
+version: 0.0.1
 publish_to: 'none'
 # homepage: https://www.example.com
 
@@ -9,7 +9,7 @@ environment:
 
 dependencies:
   barista:
-    path: ../barista
+    path: ./lib/barista
 
 dev_dependencies:
   lints: ^2.0.0

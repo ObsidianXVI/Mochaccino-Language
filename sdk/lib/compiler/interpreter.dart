@@ -50,7 +50,7 @@ class Interpreter {
 
   void interpretOkStmt(OkStmt stmt) {
     Object? value = evaluateExpression(stmt.expression);
-    print("OK:" + value.toString());
+    Interface.writeLog("OK:${value.toString()}", Source.interpreter);
   }
 
   Object? interpretLiteral(Value value) {
