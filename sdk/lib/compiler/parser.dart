@@ -18,15 +18,17 @@ class Parser extends CompileComponent {
       if (stmt != null) statements.add(stmt);
     }
     // DEBUG: print out generated tokens
-    for (Statement stmt in statements) {
-      compileResult.logs.add(
-        ConsoleLog(
-          LogType.info,
-          stmt.toTree(0),
-          Source.parser,
-          debug: true,
-        ),
-      );
+    if (Interface.debugMode) {
+      for (Statement stmt in statements) {
+        compileResult.logs.add(
+          ConsoleLog(
+            LogType.info,
+            stmt.toTree(0),
+            Source.parser,
+            debug: true,
+          ),
+        );
+      }
     }
     return statements;
   }
@@ -77,15 +79,15 @@ class Parser extends CompileComponent {
 
     Expression initialiser = Value(null);
 
-    if (match([TokenType.ANGLED_LEFT]))
-      null; // type annotation `parseTypeAnnotation`
+    /* if (match([TokenType.ANGLED_LEFT]))
+      null; // type annotation `parseTypeAnnotation` */
 
     if (match([TokenType.EQUAL])) {
       initialiser = parseExpression();
     }
 
     consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
-    return new InitialiserStmt(name, mocc.Object(null), initialiser);
+    return InitialiserStmt(name, MoccDyn(null), initialiser);
   }
 
   Statement parseStatement() {
@@ -284,7 +286,7 @@ class ExpressionStmt extends Statement {
 
 class InitialiserStmt extends Statement {
   final Token name;
-  final mocc.MoccType objectType;
+  final MoccType objectType;
   final Expression? initialiser;
 
   InitialiserStmt(this.name, this.objectType, this.initialiser);

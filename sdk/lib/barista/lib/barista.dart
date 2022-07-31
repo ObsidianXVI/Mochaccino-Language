@@ -10,7 +10,7 @@ void main(List<String> args) {
     Interface.writeErr("Argument list is empty", Source.barista);
     exit(2);
   }
-  switch (args.first) {
+  switch (args[0]) {
     case "init":
       // loading spinner
       Commands.init(args);
@@ -19,7 +19,7 @@ void main(List<String> args) {
       Commands.run(args);
       break;
     default:
-      Interface.writeErr("Command '${args.first}' not found", Source.barista);
+      Interface.writeErr("Command '${args[0]}' not found", Source.barista);
       break;
   }
 }

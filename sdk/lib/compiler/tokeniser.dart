@@ -101,15 +101,17 @@ class Tokeniser {
     );
 
     // DEBUG: print out generated tokens
-    for (Token tok in tokens) {
-      compileResult.logs.add(
-        ConsoleLog(
-          LogType.info,
-          tok.toString(),
-          Source.tokeniser,
-          debug: true,
-        ),
-      );
+    if (Interface.debugMode) {
+      for (Token tok in tokens) {
+        compileResult.logs.add(
+          ConsoleLog(
+            LogType.info,
+            tok.toString(),
+            Source.tokeniser,
+            debug: true,
+          ),
+        );
+      }
     }
     return tokens;
   }

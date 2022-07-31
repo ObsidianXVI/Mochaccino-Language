@@ -1,8 +1,8 @@
 library mochaccino.sdk.compiler;
 
-import 'package:barista/interface/interface.dart';
+import 'package:mochaccino_sdk/barista/lib/interface/interface.dart';
 import './runtime/runtime.dart';
-import './runtime/moccTypes.dart' as mocc;
+import './runtime/moccTypes.dart';
 import 'dart:io';
 
 part './compiler.dart';

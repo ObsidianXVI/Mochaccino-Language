@@ -24,7 +24,7 @@ abstract class Issue implements Exception {
 
   String get consoleString {
     return """
-$this: $title
+${toString().replaceAll("Instance of '", '').replaceAll("'", '')}: $title
   $description
   [$filePath:$lineNo]:
     $lineNo| $offendingLine

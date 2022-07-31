@@ -15,6 +15,7 @@ enum Source {
   tokeniser,
   parser,
   interpreter,
+  program,
 }
 
 extension EnumUtils on Source {
@@ -24,6 +25,7 @@ extension EnumUtils on Source {
     if (this == Source.tokeniser) return "TOK";
     if (this == Source.parser) return "PAR";
     if (this == Source.interpreter) return "INT";
+    if (this == Source.program) return "PRG";
     return toString();
   }
 }
@@ -39,7 +41,7 @@ extension LogTypeUtils on LogType {
 }
 
 class Interface {
-  static bool debugMode = false;
+  static bool debugMode = true;
   static void writeRaw(
     String msg,
     LogType logType,
@@ -59,8 +61,8 @@ class Interface {
     }
   }
 
-  static void writeDebug(String msg, Source source) {
-    if (debugMode) writeLog(msg, source);
+  static void markAsDebug(void Function() logFn) {
+    if (debugMode) logFn();
   }
 
   static void writeLog(String msg, Source source) =>

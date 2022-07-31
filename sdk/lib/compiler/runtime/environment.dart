@@ -2,13 +2,13 @@ part of mochaccino.sdk.compiler.runtime;
 
 class Environment {
   static late CompileJob compileJob;
-  static final Map<String, mocc.Object> values = {};
+  static final Map<String, MoccObject> values = {};
 
   static void defineObject(String name, Object? value) {
-    values[name] = mocc.Object(value);
+    values[name] = MoccDyn(value);
   }
 
-  static getObject(Token token) {
+  static MoccObject getObject(Token token) {
     if (values.containsKey(token.lexeme)) {
       return values[token.lexeme]!;
     }

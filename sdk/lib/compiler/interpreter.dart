@@ -14,10 +14,13 @@ class Interpreter {
       for (Statement stmt in statements) {
         interpretStmt(stmt);
       }
-    } catch (e) {
-      Issue runtimeError = e as Issue;
+    } on Issue catch (runtimeError) {
       ErrorHandler.issues.add(runtimeError);
-      print(e.toString());
+      ErrorHandler.issues.forEach(
+        (Issue i) => Interface.writeErr(i.consoleString, Source.interpreter),
+      );
+    } catch (e) {
+      print(e);
     }
   }
 
@@ -41,7 +44,7 @@ class Interpreter {
   }
 
   Object? interpretVarReference(VariableReference expr) {
-    return Environment.getObject(expr.name).value;
+    return Environment.getObject(expr.name).innerValue;
   }
 
   void interpretExpressionStmt(ExpressionStmt stmt) {
@@ -50,7 +53,7 @@ class Interpreter {
 
   void interpretOkStmt(OkStmt stmt) {
     Object? value = evaluateExpression(stmt.expression);
-    Interface.writeLog("OK:${value.toString()}", Source.interpreter);
+    Interface.writeLog("OK:${value.toString()}", Source.program);
   }
 
   Object? interpretLiteral(Value value) {
@@ -167,7 +170,6 @@ class Interpreter {
   Object? interpretBinary(BinaryExp expr) {
     Object? left = evaluateExpression(expr.leftOperand);
     Object? right = evaluateExpression(expr.rightOperand);
-
     if (expr is EqualityExp) {
       switch (expr.op.symbol) {
         case EqualitySymbol.isEqual:
@@ -178,10 +180,12 @@ class Interpreter {
     } else if (expr is LogicalExp) {
       switch (expr.op.symbol) {
         case LogicalSymbol.and:
-          checkBooleanOperand(expr.op.symbol, expr, expr.op.op);
+          checkBooleanOperand(expr.op.symbol, left, expr.op.op);
+          checkBooleanOperand(expr.op.symbol, right, expr.op.op);
           return (left as bool) && (right as bool);
         case LogicalSymbol.or:
-          checkBooleanOperand(expr.op.symbol, expr, expr.op.op);
+          checkBooleanOperand(expr.op.symbol, left, expr.op.op);
+          checkBooleanOperand(expr.op.symbol, right, expr.op.op);
           return (left as bool) || (right as bool);
       }
     } else if (expr is ComparativeExp) {

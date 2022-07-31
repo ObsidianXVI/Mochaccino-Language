@@ -1,103 +1,22 @@
 library mochaccino.sdk.compiler.runtime.mocc_types;
 
-class Mochaccino {
-  const Mochaccino();
-}
+import './dart_port.dart';
+export './dart_port.dart';
 
-class PortedObject extends Mochaccino {
+class PortedObject {
   const PortedObject();
 }
 
-class MochaccinoType extends PortedObject {
-  const MochaccinoType();
+class Parameters {
+  final List<Map<String, Type>> positionalArgs;
+  final Map<String, Map<MoccType, MoccObject>> namedArgs;
+
+  Parameters({required this.positionalArgs, required this.namedArgs});
 }
 
-@MochaccinoType()
-abstract class MoccType {
-  const MoccType();
-}
+class Arguments {
+  final List<MoccObject> positionalArgs;
+  final Map<String, MoccObject> namedArgs;
 
-@MochaccinoType()
-abstract class Meta extends MoccType {}
-
-@MochaccinoType()
-class STRUCT extends Meta {}
-
-@MochaccinoType()
-class MODULE extends Meta {}
-
-@MochaccinoType()
-abstract class Composite extends MoccType {
-  const Composite();
-}
-
-@MochaccinoType()
-class Object extends Composite {
-  final dynamic value;
-  const Object(this.value);
-}
-
-@MochaccinoType()
-class Exception extends Object {
-  Exception(super.value);
-}
-
-@MochaccinoType()
-class Error extends Object {
-  Error(super.value);
-}
-
-@MochaccinoType()
-class Promise extends Object {
-  Promise(super.value);
-}
-
-@MochaccinoType()
-class Duration extends Object {
-  Duration(super.value);
-}
-
-@MochaccinoType()
-class DateTime extends Object {
-  DateTime(super.value);
-}
-
-@MochaccinoType()
-abstract class Primitive extends Object {
-  Primitive(super.value);
-}
-
-@MochaccinoType()
-class Int extends Primitive {
-  Int(super.value);
-}
-
-@MochaccinoType()
-class Double extends Primitive {
-  Double(super.value);
-}
-
-@MochaccinoType()
-class Num extends Primitive {
-  Num(super.value);
-}
-
-@MochaccinoType()
-class Bool extends Primitive {
-  Bool(super.value);
-}
-
-@MochaccinoType()
-class Str extends Primitive {
-  Str(super.value);
-}
-
-@MochaccinoType()
-class Map extends Primitive {
-  Map(super.value);
-}
-
-@MochaccinoType()
-class Array extends Primitive {
-  Array(super.value);
+  const Arguments({this.positionalArgs = const [], this.namedArgs = const {}});
 }
