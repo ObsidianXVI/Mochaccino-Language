@@ -187,7 +187,47 @@ class Parser extends CompileComponent {
       return UnaryExp(UnaryPrefixOp(op), right);
     }
 
-    return parseValue();
+    return parseInvCall();
+  }
+
+  Expression parseInvCall() {
+    Expression expr = parseValue();
+
+    while (true) {
+      if (match([TokenType.LEFT_PAREN])) {
+        expr = parseArgs(expr);
+      } else {
+        break;
+      }
+    }
+
+    return expr;
+  }
+
+  Expression parseArgs(Expression callee) {
+    final List<Expression> arguments = [];
+    if (!check(TokenType.RIGHT_PAREN)) {
+      do {
+        arguments.add(parseExpression());
+      } while (match([TokenType.COMMA]));
+    }
+
+    Token paren = consume(
+        TokenType.RIGHT_PAREN, "Expect ')' after arguments in invocation.");
+
+    if (arguments.length > 200) {
+      ErrorHandler.issues.add(
+        ArgumentError(
+          ArgumentError.tooManyArguments(arguments.length),
+          lineNo: peek().lineNo,
+          start: peek().start,
+          offendingLine: sourceLines[peek().lineNo],
+          description: "Try limiting the number of arguments to under 200.",
+          source: Source.parser,
+        ),
+      );
+    }
+    return InvocationExpression(callee, paren, arguments);
   }
 
   Expression parseValue() {
@@ -320,6 +360,21 @@ class OkStmt extends Statement {
 }
 
 abstract class Expression implements Node {}
+
+class InvocationExpression implements Expression {
+  final Expression callee;
+  final Token paren;
+  final List<Expression> arguments;
+
+  InvocationExpression(this.callee, this.paren, this.arguments);
+
+  @override
+  String toTree(int indent) {
+    return "${this.runtimeType}"
+        .indent(indent)
+        .newline(callee.toTree(indent + 2));
+  }
+}
 
 class VariableReference implements Expression {
   final Token name;

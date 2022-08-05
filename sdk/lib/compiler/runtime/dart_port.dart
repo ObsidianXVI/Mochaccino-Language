@@ -1,5 +1,6 @@
 import './moccTypes.dart';
 import '../../barista/lib/interface/interface.dart';
+import '../compiler_entry.dart';
 
 /////////////////////////
 /// PortedObject
@@ -79,7 +80,7 @@ abstract class MoccInv<T extends MoccObject> extends Composite {
   /// Mocc Maybe use factory?
   const MoccInv(this.params) : super(null);
 
-  T call(Arguments args);
+  T call(Interpreter interpreter, Arguments args);
 }
 
 abstract class MoccFn<T extends MoccObject> extends MoccInv<T> {
@@ -88,8 +89,8 @@ abstract class MoccFn<T extends MoccObject> extends MoccInv<T> {
 
 ///////////////////////
 
-class Print extends MoccFn<MoccVoid> {
-  Print(MoccStr payload)
+class Log extends MoccFn<MoccVoid> {
+  Log()
       : super(
           Parameters(
             positionalArgs: [
@@ -100,9 +101,9 @@ class Print extends MoccFn<MoccVoid> {
         );
 
   @override
-  MoccVoid call(Arguments args) {
+  MoccVoid call(Interpreter interpreter, Arguments args) {
     Interface.write(
-        args.namedArgs.get('payload').innerValue, LogType.log, Source.program);
+        args.positionalArgs.first.innerValue, LogType.log, Source.program);
     return const MoccNull();
   }
 }

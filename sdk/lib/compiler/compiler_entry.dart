@@ -3,6 +3,7 @@ library mochaccino.sdk.compiler;
 import 'package:mochaccino_sdk/barista/lib/interface/interface.dart';
 import './runtime/runtime.dart';
 import './runtime/moccTypes.dart';
+import './runtime/dart_port.dart';
 import 'dart:io';
 
 part './compiler.dart';

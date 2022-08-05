@@ -101,3 +101,21 @@ class StackError extends Issue {
     super.filePath = 'main.mocc',
   });
 }
+
+class ArgumentError extends Issue {
+  ArgumentError(
+    super.title, {
+    required super.lineNo,
+    required super.offendingLine,
+    required super.start,
+    required super.description,
+    required super.source,
+    super.filePath = 'main.mocc',
+  });
+
+  static String tooManyArguments(int argsCount) =>
+      "Too many arguments provided ($argsCount)";
+
+  static String tooLittlePositionalArgs(int expectedCount, int argsCount) =>
+      "Expected $expectedCount positional arguments, but only $argsCount provided";
+}

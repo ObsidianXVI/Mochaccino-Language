@@ -4,13 +4,22 @@ class Interpreter {
   final List<Statement> statements;
   final CompileJob compileJob;
   final List<String> sourceLines = [];
+  final Environment environment = Environment();
+  late Environment _global;
 
   Interpreter(this.statements, this.compileJob) {
     sourceLines.addAll(compileJob.source.split('\n'));
+    environment.compileJob = compileJob;
+    _global = environment;
+  }
+
+  void _loadPortedObjects() {
+    environment.defineObject('log', Log());
   }
 
   void interpret() {
     try {
+      _loadPortedObjects();
       for (Statement stmt in statements) {
         interpretStmt(stmt);
       }
@@ -19,8 +28,9 @@ class Interpreter {
       ErrorHandler.issues.forEach(
         (Issue i) => Interface.writeErr(i.consoleString, Source.interpreter),
       );
-    } catch (e) {
+    } catch (e, st) {
       print(e);
+      print(st);
     }
   }
 
@@ -40,11 +50,11 @@ class Interpreter {
       value = evaluateExpression(stmt.initialiser!);
     }
 
-    Environment.defineObject(stmt.name.lexeme, value);
+    environment.defineObject(stmt.name.lexeme, value);
   }
 
   Object? interpretVarReference(VariableReference expr) {
-    return Environment.getObject(expr.name).innerValue;
+    return environment.getObject(expr.name).innerValue;
   }
 
   void interpretExpressionStmt(ExpressionStmt stmt) {
@@ -75,6 +85,8 @@ class Interpreter {
       return interpretLiteral((expr as Value));
     } else if (expr is VariableReference) {
       return interpretVarReference(expr);
+    } else if (expr is InvocationExpression) {
+      return interpretInvocationExpression(expr);
     }
 
     return null;
@@ -254,4 +266,74 @@ class Interpreter {
     }
     return null;
   }
+
+  Object? interpretInvocationExpression(InvocationExpression invocation) {
+    Object? callee = evaluateExpression(invocation.callee);
+
+    final List<MoccObject> arguments = [];
+    for (Expression argument in invocation.arguments) {
+      arguments.add(evaluateExpression(argument).toMoccObject());
+    }
+
+    if (callee is! MoccInv) {
+      throw TypeError(
+        TypeError.operationTypeError("()", MoccInv, callee.runtimeType),
+        lineNo: invocation.paren.lineNo,
+        offendingLine: sourceLines[invocation.paren.lineNo],
+        start: invocation.paren.start,
+        description:
+            "A value of type [${callee.runtimeType}] can't be invoked.",
+        source: Source.interpreter,
+      );
+    }
+    MoccFn moccInovation = callee as MoccFn;
+    final Arguments args = Arguments(positionalArgs: arguments);
+    args.checkArity(moccInovation.params, invocation.paren,
+        sourceLines[invocation.paren.lineNo]);
+    return moccInovation.call(this, args);
+  }
+}
+
+extension ObjectUtils on Object? {
+  MoccObject toMoccObject() {
+    if (this == null) return const MoccNull();
+    if (this is int) return MoccInt(this as int);
+    if (this is double) return MoccDbl(this as double);
+    if (this is bool) return MoccBool(this as bool);
+    if (this is String) return MoccStr(this as String);
+    return MoccDyn(this as dynamic);
+  }
+}
+
+class Parameters {
+  final List<Map<String, Type>> positionalArgs;
+  final Map<String, Map<MoccType, MoccObject>> namedArgs;
+
+  Parameters({required this.positionalArgs, required this.namedArgs});
+}
+
+class Arguments {
+  final List<MoccObject> positionalArgs;
+  final Map<String, MoccObject> namedArgs;
+
+  const Arguments({this.positionalArgs = const [], this.namedArgs = const {}});
+
+  void checkArity(Parameters parameters, Token paren, String offendingLine) {
+    /// check if positional args are sufficient (DO NOT CHECK TYPE)
+    /// check if required named args are provided
+    /// check if too many args provided
+    if (!(positionalArgs.length == parameters.positionalArgs.length)) {
+      throw ArgumentError(
+        ArgumentError.tooLittlePositionalArgs(
+            parameters.positionalArgs.length, positionalArgs.length),
+        lineNo: paren.lineNo,
+        offendingLine: offendingLine,
+        start: paren.start,
+        description: "Try adding the required arguments.",
+        source: Source.interpreter,
+      );
+    }
+  }
+
+  //todo: check named args
 }

@@ -1,14 +1,16 @@
 part of mochaccino.sdk.compiler.runtime;
 
 class Environment {
-  static late CompileJob compileJob;
-  static final Map<String, MoccObject> values = {};
+  late CompileJob compileJob;
+  final Map<String, MoccObject> values = {};
 
-  static void defineObject(String name, Object? value) {
-    values[name] = MoccDyn(value);
+  Environment();
+
+  void defineObject(String name, Object? value) {
+    values[name] = value.toMoccObject();
   }
 
-  static MoccObject getObject(Token token) {
+  MoccObject getObject(Token token) {
     if (values.containsKey(token.lexeme)) {
       return values[token.lexeme]!;
     }
