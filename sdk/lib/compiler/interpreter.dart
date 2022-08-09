@@ -4,7 +4,7 @@ class Interpreter {
   final List<Statement> statements;
   final CompileJob compileJob;
   final List<String> sourceLines = [];
-  final Environment environment = Environment();
+  Environment environment = Environment();
   late Environment _global;
 
   Interpreter(this.statements, this.compileJob) {
@@ -25,9 +25,9 @@ class Interpreter {
       }
     } on Issue catch (runtimeError) {
       ErrorHandler.issues.add(runtimeError);
-      ErrorHandler.issues.forEach(
-        (Issue i) => Interface.writeErr(i.consoleString, Source.interpreter),
-      );
+      for (Issue i in ErrorHandler.issues) {
+        Interface.writeErr(i.consoleString, Source.interpreter);
+      }
     } catch (e, st) {
       print(e);
       print(st);
@@ -41,6 +41,59 @@ class Interpreter {
       interpretExpressionStmt(stmt);
     } else if (stmt is OkStmt) {
       interpretOkStmt(stmt);
+    } else if (stmt is BlockStmt) {
+      interpretBlockStmt(stmt);
+    } else if (stmt is IfStmt) {
+      interpretIfStmt(stmt);
+    } else if (stmt is WhileStmt) {
+      interpretWhileStmt(stmt);
+    } else if (stmt is FuncDecl) {
+      interpretFuncDecl(stmt);
+    } else if (stmt is ReturnStmt) {
+      interpretReturnStmt(stmt);
+    }
+  }
+
+  void interpretReturnStmt(ReturnStmt stmt) {
+    Object? value = null;
+    if (stmt.value != null) value = evaluateExpression(stmt.value!);
+
+    throw Return(value);
+  }
+
+  void interpretFuncDecl(FuncDecl decl) {
+    final MoccFn function = MoccFn(decl);
+    environment.defineObject(decl.name.lexeme, function);
+  }
+
+  void interpretWhileStmt(WhileStmt stmt) {
+    while (isTruthy(evaluateExpression(stmt.condition))) {
+      interpretStmt(stmt.body);
+    }
+  }
+
+  void interpretIfStmt(IfStmt stmt) {
+    if (isTruthy(evaluateExpression(stmt.condition))) {
+      interpretStmt(stmt.thenBranch);
+    } else if (stmt.elseBranch != null) {
+      interpretStmt(stmt.elseBranch!);
+    }
+  }
+
+  void interpretBlockStmt(BlockStmt stmt) {
+    executeBlock(stmt.statements, Environment(environment));
+  }
+
+  void executeBlock(List<Statement?> statements, Environment environment) {
+    Environment previous = this.environment;
+    try {
+      this.environment = environment;
+
+      for (Statement? statement in statements) {
+        if (statement != null) interpretStmt(statement);
+      }
+    } finally {
+      this.environment = previous;
     }
   }
 
@@ -55,6 +108,12 @@ class Interpreter {
 
   Object? interpretVarReference(VariableReference expr) {
     return environment.getObject(expr.name).innerValue;
+  }
+
+  Object? interpretVarAssignment(VariableAssignment expr) {
+    Object? value = evaluateExpression(expr.value);
+    environment.redefineObject(expr.name, value);
+    return value;
   }
 
   void interpretExpressionStmt(ExpressionStmt stmt) {
@@ -85,6 +144,8 @@ class Interpreter {
       return interpretLiteral((expr as Value));
     } else if (expr is VariableReference) {
       return interpretVarReference(expr);
+    } else if (expr is VariableAssignment) {
+      return interpretVarAssignment(expr);
     } else if (expr is InvocationExpression) {
       return interpretInvocationExpression(expr);
     }
@@ -288,7 +349,8 @@ class Interpreter {
     }
     MoccFn moccInovation = callee as MoccFn;
     final Arguments args = Arguments(positionalArgs: arguments);
-    args.checkArity(moccInovation.params, invocation.paren,
+    print(args.positionalArgs);
+    args.checkArity(moccInovation.declaration.parameters, invocation.paren,
         sourceLines[invocation.paren.lineNo]);
     return moccInovation.call(this, args);
   }
@@ -322,14 +384,27 @@ class Arguments {
     /// check if positional args are sufficient (DO NOT CHECK TYPE)
     /// check if required named args are provided
     /// check if too many args provided
-    if (!(positionalArgs.length == parameters.positionalArgs.length)) {
+    final int underflow =
+        parameters.positionalArgs.length - positionalArgs.length;
+    if (underflow > 0) {
       throw ArgumentError(
-        ArgumentError.tooLittlePositionalArgs(
+        ArgumentError.wrongNumberOfArguments(
             parameters.positionalArgs.length, positionalArgs.length),
         lineNo: paren.lineNo,
         offendingLine: offendingLine,
         start: paren.start,
-        description: "Try adding the required arguments.",
+        description:
+            "Try adding $underflow more arguments for ${parameters.positionalArgs.sublist(parameters.positionalArgs.length - underflow).map((e) => "${e}").toList().join(', ')}.",
+        source: Source.interpreter,
+      );
+    } else if (underflow < 0) {
+      throw ArgumentError(
+        ArgumentError.wrongNumberOfArguments(
+            parameters.positionalArgs.length, positionalArgs.length),
+        lineNo: paren.lineNo,
+        offendingLine: offendingLine,
+        start: paren.start,
+        description: "Try removing ${-underflow} arguments.",
         source: Source.interpreter,
       );
     }

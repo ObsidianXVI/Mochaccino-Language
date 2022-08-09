@@ -66,12 +66,43 @@ class Parser extends CompileComponent {
 
   Statement? parseDeclaration() {
     try {
+      if (match([TokenType.FUNC])) return parseFuncDecl('function');
       if (match([TokenType.VAR])) return parseVarDecl();
       return parseStatement();
     } catch (e) {
       synchronize();
       return null;
     }
+  }
+
+  Statement parseFuncDecl(String kind) {
+    final Token name = consume(TokenType.IDENTIFIER, "Expected $kind name.");
+    consume(TokenType.LEFT_PAREN, "Expected '(' after $kind name.");
+    final List<Token> parameters = [];
+    if (!check(TokenType.RIGHT_PAREN)) {
+      do {
+        if (parameters.length >= 200) {
+          ErrorHandler.issues.add(
+            ArgumentError(
+              ArgumentError.tooManyParameters(parameters.length),
+              lineNo: peek().lineNo,
+              start: peek().start,
+              offendingLine: sourceLines[peek().lineNo],
+              description:
+                  "Try limiting the number of parameters to under 200.",
+              source: Source.parser,
+            ),
+          );
+        }
+
+        parameters
+            .add(consume(TokenType.IDENTIFIER, "Expected parameter name."));
+      } while (match([TokenType.COMMA]));
+    }
+    consume(TokenType.RIGHT_PAREN, "Expected ')' after parameter list.");
+    consume(TokenType.LEFT_BRACE, "Expected '{' before $kind body.");
+    final List<Statement?> body = parseBlock();
+    return FuncDecl(name, parameters, body);
   }
 
   Statement parseVarDecl() {
@@ -91,9 +122,95 @@ class Parser extends CompileComponent {
   }
 
   Statement parseStatement() {
+    if (match([TokenType.RETURN])) return parseReturnStmt();
+    if (match([TokenType.FOR])) return parseForStmt();
+    if (match([TokenType.IF])) return parseIfStmt();
+    if (match([TokenType.WHILE])) return parseWhileStmt();
     if (match([TokenType.OK])) return parseOkStmt();
-
+    if (match([TokenType.LEFT_BRACE])) return BlockStmt(parseBlock());
     return parseExpressionStmt();
+  }
+
+  List<Statement?> parseBlock() {
+    final List<Statement?> statements = [];
+
+    while (!check(TokenType.RIGHT_BRACE) && !atEnd) {
+      statements.add(parseDeclaration());
+    }
+
+    consume(TokenType.RIGHT_BRACE, "Expected '}' after block.");
+    return statements;
+  }
+
+  Statement parseReturnStmt() {
+    Token keyword = previous();
+    final Expression? value;
+    if (!check(TokenType.SEMICOLON)) {
+      value = parseExpression();
+    } else {
+      value = null;
+    }
+
+    consume(TokenType.SEMICOLON, "Expected ';' after return statement.");
+    return ReturnStmt(keyword, value);
+  }
+
+  Statement parseForStmt() {
+    consume(TokenType.LEFT_PAREN, "Expected '(' after 'for'.");
+    final Statement? initializer;
+    if (match([TokenType.SEMICOLON])) {
+      initializer = null;
+    } else if (match([TokenType.VAR])) {
+      initializer = parseVarDecl();
+    } else {
+      initializer = parseExpressionStmt();
+    }
+    Expression? condition = null;
+    if (!check(TokenType.SEMICOLON)) {
+      condition = parseExpression();
+    }
+    consume(TokenType.SEMICOLON, "Expected ';' after loop condition.");
+
+    Expression? increment = null;
+    if (!check(TokenType.RIGHT_PAREN)) {
+      increment = parseExpression();
+    }
+    consume(TokenType.RIGHT_PAREN, "Expected ')' after clauses.");
+    Statement body = parseStatement();
+    if (increment != null) {
+      body = BlockStmt(([body, ExpressionStmt(increment)]));
+    }
+    condition ??= Value(true);
+    body = WhileStmt(condition, body);
+    if (initializer != null) {
+      body = BlockStmt([initializer, body]);
+    }
+    return body;
+  }
+
+  Statement parseWhileStmt() {
+    consume(TokenType.LEFT_PAREN, "Expect '(' after 'while'.");
+    final Expression condition = parseExpression();
+    consume(TokenType.RIGHT_PAREN, "Expected ')' after condition.");
+    final Statement body = parseStatement();
+
+    return WhileStmt(condition, body);
+  }
+
+  Statement parseIfStmt() {
+    consume(TokenType.LEFT_PAREN, "Expected '(' after 'if'.");
+    final Expression condition = parseExpression();
+    consume(TokenType.RIGHT_PAREN, "Expected ')' after if condition.");
+
+    final Statement thenBranch = parseStatement();
+    final Statement? elseBranch;
+    if (match([TokenType.ELSE])) {
+      elseBranch = parseStatement();
+    } else {
+      elseBranch = null;
+    }
+
+    return IfStmt(condition, thenBranch, elseBranch);
   }
 
   Statement parseOkStmt() {
@@ -108,7 +225,7 @@ class Parser extends CompileComponent {
     return ExpressionStmt(expression);
   }
 
-  Expression parseExpression() => parseEquality();
+  Expression parseExpression() => parseAssignment();
   Expression parseEquality() {
     Expression expr = parseLogical();
 
@@ -262,6 +379,34 @@ class Parser extends CompileComponent {
     );
   }
 
+  Expression parseAssignment() {
+    Expression expr = parseEquality();
+
+    if (match([TokenType.EQUAL])) {
+      Token equals = previous();
+      Expression value = parseAssignment();
+
+      if (expr is VariableReference) {
+        Token name = expr.name;
+        return VariableAssignment(name, value);
+      }
+
+      ErrorHandler.issues.add(
+        ReferenceError(
+          ReferenceError.invalidAssignmentTarget(equals.lexeme),
+          lineNo: equals.lineNo,
+          start: equals.start,
+          offendingLine: sourceLines[equals.lineNo],
+          description:
+              "Try declaring a variable named '${equals.lexeme}' in the current scope",
+          source: Source.parser,
+        ),
+      );
+    }
+
+    return expr;
+  }
+
   bool match(List<TokenType> types) {
     for (TokenType type in types) {
       if (check(type)) {
@@ -311,6 +456,57 @@ abstract class Node {
 
 abstract class Statement implements Node {}
 
+class IfStmt extends Statement {
+  final Expression condition;
+  final Statement thenBranch;
+  final Statement? elseBranch;
+
+  IfStmt(this.condition, this.thenBranch, this.elseBranch);
+
+  @override
+  String toTree(int indent) => "${this.runtimeType}".indent(indent)
+    ..newline("CONDITION: ${condition.toTree(indent + 2)}".indent(indent + 2))
+    ..newline("THEN: ${thenBranch.toTree(indent + 2)}".indent(indent + 2))
+    ..newline("ELSE: ${elseBranch?.toTree(indent + 2)}".indent(indent + 2));
+}
+
+class WhileStmt extends Statement {
+  final Expression condition;
+  final Statement body;
+
+  WhileStmt(this.condition, this.body);
+
+  @override
+  String toTree(int indent) => "${this.runtimeType}".indent(indent)
+    ..newline("WHILE: ${condition.toTree(indent + 2)}".indent(indent + 2))
+    ..newline("DO: ${body.toTree(indent + 2)}".indent(indent + 2));
+}
+
+class ReturnStmt extends Statement {
+  final Token keyword;
+  final Expression? value;
+
+  ReturnStmt(this.keyword, this.value);
+
+  @override
+  String toTree(int indent) => "${this.runtimeType}: ${value?.toTree(indent)}";
+}
+
+class BlockStmt extends Statement {
+  final List<Statement?> statements;
+
+  BlockStmt(this.statements);
+
+  @override
+  String toTree(int indent) => "${this.runtimeType}".indent(indent)
+    ..newline(
+      statements
+          .map((Statement? s) => s?.toTree(indent).indent(indent + 2))
+          .toList()
+          .join('\n'),
+    );
+}
+
 class ExpressionStmt extends Statement {
   final Expression expression;
 
@@ -359,7 +555,53 @@ class OkStmt extends Statement {
   }
 }
 
+class FuncDecl extends Statement {
+  late Token name;
+  late List<Token> params;
+  late Parameters parameters;
+  late List<Statement?> body;
+
+  FuncDecl(this.name, this.params, this.body) {
+    parameters = Parameters(
+      positionalArgs: params.map((e) => {e.lexeme: MoccDyn}).toList(),
+      namedArgs: const {},
+    );
+  }
+
+  FuncDecl.portedFn(String name, this.parameters) {
+    this.name = Token(TokenType.IDENTIFIER, name, lineNo: 0, start: 0);
+    params = [];
+    body = [];
+  }
+
+  @override
+  String toTree(int indent) {
+    return "${this.runtimeType}: ${name.lexeme}".indent(indent).newline(
+          "PARAMS:".indent(indent + 2).newline(
+                params
+                    .map((Token t) => t.lexeme.indent(indent + 4))
+                    .toList()
+                    .join('\n'),
+              ),
+        );
+  }
+}
+
 abstract class Expression implements Node {}
+
+class VariableAssignment extends Expression {
+  final Token name;
+  final Expression value;
+
+  VariableAssignment(this.name, this.value);
+
+  @override
+  String toTree(int indent) {
+    return "${this.runtimeType}".indent(indent)
+      ..newline("NAME: ${name.lexeme}").indent(indent + 2)
+      ..newline("VALUE: ${value.toTree(indent + 2)}").indent(indent + 2);
+  }
+}
 
 class InvocationExpression implements Expression {
   final Expression callee;

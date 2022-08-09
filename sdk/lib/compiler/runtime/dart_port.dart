@@ -1,6 +1,7 @@
 import './moccTypes.dart';
 import '../../barista/lib/interface/interface.dart';
 import '../compiler_entry.dart';
+import '../runtime/runtime.dart';
 
 /////////////////////////
 /// PortedObject
@@ -74,36 +75,55 @@ class MoccNull extends MoccVoid {
 
 ////////////////////////
 
-abstract class MoccInv<T extends MoccObject> extends Composite {
-  final Parameters params;
+abstract class MoccInv extends Composite {
+  const MoccInv() : super(null);
 
-  /// Mocc Maybe use factory?
-  const MoccInv(this.params) : super(null);
-
-  T call(Interpreter interpreter, Arguments args);
+  MoccObject call(Interpreter interpreter, Arguments args);
 }
 
-abstract class MoccFn<T extends MoccObject> extends MoccInv<T> {
-  const MoccFn(super.params);
+class MoccFn extends MoccInv {
+  final FuncDecl declaration;
+  MoccFn(this.declaration);
+
+  Environment runPreExecTasks(Interpreter interpreter, Arguments args) {
+    final Environment environment = Environment(interpreter.environment);
+    for (int i = 0; i < declaration.params.length; i++) {
+      environment.defineObject(
+          declaration.params[i].lexeme, args.positionalArgs[i]);
+    }
+    return environment;
+  }
+
+  @override
+  MoccObject call(Interpreter interpreter, Arguments args) {
+    final Environment environment = runPreExecTasks(interpreter, args);
+    try {
+      interpreter.executeBlock(declaration.body, environment);
+    } on Return catch (e) {
+      return e.value.toMoccObject();
+    }
+    return const MoccNull();
+  }
 }
 
 ///////////////////////
 
-class Log extends MoccFn<MoccVoid> {
+class Log extends MoccFn {
   Log()
       : super(
-          Parameters(
-            positionalArgs: [
-              {'payload': MoccStr}
-            ],
-            namedArgs: const {},
+          FuncDecl.portedFn(
+            'log',
+            Parameters(positionalArgs: [
+              {'msg': MoccStr}
+            ], namedArgs: {}),
           ),
         );
 
   @override
   MoccVoid call(Interpreter interpreter, Arguments args) {
-    Interface.write(
-        args.positionalArgs.first.innerValue, LogType.log, Source.program);
+    final Environment environment = runPreExecTasks(interpreter, args);
+    Interface.write(args.positionalArgs.first.innerValue.toString(),
+        LogType.log, Source.program);
     return const MoccNull();
   }
 }

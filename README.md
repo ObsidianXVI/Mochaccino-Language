@@ -66,3 +66,14 @@ struct Coffee {}
 var x<STRUCT> = Coffee;
 var data2<x> = {}::x;
 ```
+
+## Type Casting
+```dart
+m<json> // changes the object type to json
+x<json> = json(m) // creates unlinked object
+y<json> = m => json; // creates linked object
+Constructors will look like:
+struct json : elementary
+	var version<int>;
+json(m<map>, this.version)
+```

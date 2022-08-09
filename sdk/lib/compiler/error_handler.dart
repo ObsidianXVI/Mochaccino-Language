@@ -2,11 +2,14 @@ part of mochaccino.sdk.compiler;
 
 class ErrorHandler {
   static final List<Issue> issues = [];
+  static String currentFileName = 'main.mocc';
+  static String currentFilePath = '<ANONYMOUS>';
 }
 
 abstract class Issue implements Exception {
   final String title;
-  final String filePath;
+  final String filePath = ErrorHandler.currentFilePath;
+  final String fileName = ErrorHandler.currentFileName;
   final int lineNo;
   final String offendingLine;
   final int start;
@@ -19,14 +22,13 @@ abstract class Issue implements Exception {
     required this.start,
     required this.description,
     required this.source,
-    this.filePath = 'main.mocc',
   });
 
   String get consoleString {
     return """
 ${toString().replaceAll("Instance of '", '').replaceAll("'", '')}: $title
   $description
-  [$filePath:$lineNo]:
+  [$fileName:$lineNo]:
     $lineNo| $offendingLine
 """;
   }
@@ -40,7 +42,6 @@ class PackageError extends Issue {
     required super.start,
     required super.description,
     required super.source,
-    super.filePath = 'main.mocc',
   });
 }
 
@@ -52,7 +53,6 @@ class SyntaxError extends Issue {
     required super.start,
     required super.description,
     required super.source,
-    super.filePath = 'main.mocc',
   });
 
   static String unterminatedPair(String pair) => "Unterminated '$pair' pair";
@@ -69,7 +69,6 @@ class TypeError extends Issue {
     required super.start,
     required super.description,
     required super.source,
-    super.filePath = 'main.mocc',
   });
 
   static String operationTypeError(
@@ -85,9 +84,10 @@ class ReferenceError extends Issue {
     required super.start,
     required super.description,
     required super.source,
-    super.filePath = 'main.mocc',
   });
   static String undefinedObject(String name) => "Object '$name' not defined";
+  static String invalidAssignmentTarget(String name) =>
+      "'$name' is an invalid assignment target";
 }
 
 class StackError extends Issue {
@@ -98,7 +98,6 @@ class StackError extends Issue {
     required super.start,
     required super.description,
     required super.source,
-    super.filePath = 'main.mocc',
   });
 }
 
@@ -110,12 +109,22 @@ class ArgumentError extends Issue {
     required super.start,
     required super.description,
     required super.source,
-    super.filePath = 'main.mocc',
   });
 
   static String tooManyArguments(int argsCount) =>
       "Too many arguments provided ($argsCount)";
 
-  static String tooLittlePositionalArgs(int expectedCount, int argsCount) =>
-      "Expected $expectedCount positional arguments, but only $argsCount provided";
+  static String tooManyParameters(int paramsCount) =>
+      "Too many parameters defined ($paramsCount)";
+
+  static String wrongNumberOfArguments(int expectedCount, int argsCount) =>
+      "Expected $expectedCount positional arguments, but $argsCount provided";
+}
+
+abstract class StableException implements Exception {}
+
+class Return extends StableException {
+  final Object? value;
+
+  Return(this.value);
 }

@@ -24,7 +24,7 @@ class CompilerEntryPoint {
       debug: debugMode,
     )..start();
     final Compiler compiler = Compiler(
-      CompileJob(File(fpath).readAsStringSync()),
+      CompileJob(File(fpath).readAsStringSync(), fpath),
     );
     compJobProc.complete();
     final CompileResult compileResult = compiler.compile();

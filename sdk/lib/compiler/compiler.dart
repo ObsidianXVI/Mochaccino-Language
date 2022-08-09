@@ -2,7 +2,13 @@ part of mochaccino.sdk.compiler;
 
 class CompileJob {
   final String source;
-  const CompileJob(this.source);
+  final String fpath;
+  late String fname;
+  CompileJob(this.source, this.fpath) {
+    fname = fpath.split('/').last;
+    ErrorHandler.currentFileName = fname;
+    ErrorHandler.currentFilePath = fpath;
+  }
 }
 
 class CompileResult {
