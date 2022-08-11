@@ -122,6 +122,7 @@ class Log extends MoccFn {
   @override
   MoccVoid call(Interpreter interpreter, Arguments args) {
     final Environment environment = runPreExecTasks(interpreter, args);
+
     Interface.write(args.positionalArgs.first.innerValue.toString(),
         LogType.log, Source.program);
     return const MoccNull();

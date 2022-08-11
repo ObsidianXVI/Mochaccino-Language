@@ -55,7 +55,7 @@ class Interpreter {
   }
 
   void interpretReturnStmt(ReturnStmt stmt) {
-    Object? value = null;
+    Object? value;
     if (stmt.value != null) value = evaluateExpression(stmt.value!);
 
     throw Return(value);
@@ -106,8 +106,8 @@ class Interpreter {
     environment.defineObject(stmt.name.lexeme, value);
   }
 
-  Object? interpretVarReference(VariableReference expr) {
-    return environment.getObject(expr.name).innerValue;
+  MoccObject interpretVarReference(VariableReference expr) {
+    return environment.getObject(expr.name);
   }
 
   Object? interpretVarAssignment(VariableAssignment expr) {
@@ -122,7 +122,7 @@ class Interpreter {
 
   void interpretOkStmt(OkStmt stmt) {
     Object? value = evaluateExpression(stmt.expression);
-    Interface.writeLog("OK:${value.toString()}", Source.program);
+    Interface.writeLog("OK:${value.toMoccObject().innerValue}", Source.program);
   }
 
   Object? interpretLiteral(Value value) {
@@ -195,7 +195,7 @@ class Interpreter {
   void checkNumberOperands(
       dynamic op, Object? leftOperand, Object? rightOperand, Token token) {
     if (leftOperand is double && rightOperand is double) return;
-    if (!(leftOperand is double)) {
+    if (leftOperand is! double) {
       throw TypeError(
         TypeError.operationTypeError(
           token.lexeme,
@@ -330,9 +330,9 @@ class Interpreter {
 
   Object? interpretInvocationExpression(InvocationExpression invocation) {
     Object? callee = evaluateExpression(invocation.callee);
-
     final List<MoccObject> arguments = [];
     for (Expression argument in invocation.arguments) {
+      /// These should be [Value]s, but a [VariableReference] is passed
       arguments.add(evaluateExpression(argument).toMoccObject());
     }
 
@@ -349,7 +349,6 @@ class Interpreter {
     }
     MoccFn moccInovation = callee as MoccFn;
     final Arguments args = Arguments(positionalArgs: arguments);
-    print(args.positionalArgs);
     args.checkArity(moccInovation.declaration.parameters, invocation.paren,
         sourceLines[invocation.paren.lineNo]);
     return moccInovation.call(this, args);
@@ -358,6 +357,7 @@ class Interpreter {
 
 extension ObjectUtils on Object? {
   MoccObject toMoccObject() {
+    if (this is MoccObject) return this as MoccObject;
     if (this == null) return const MoccNull();
     if (this is int) return MoccInt(this as int);
     if (this is double) return MoccDbl(this as double);

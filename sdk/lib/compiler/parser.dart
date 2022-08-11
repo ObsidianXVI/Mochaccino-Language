@@ -118,7 +118,7 @@ class Parser extends CompileComponent {
     }
 
     consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
-    return InitialiserStmt(name, MoccDyn(null), initialiser);
+    return InitialiserStmt(name, MoccDyn, initialiser);
   }
 
   Statement parseStatement() {
@@ -522,7 +522,7 @@ class ExpressionStmt extends Statement {
 
 class InitialiserStmt extends Statement {
   final Token name;
-  final MoccType objectType;
+  final Type objectType;
   final Expression? initialiser;
 
   InitialiserStmt(this.name, this.objectType, this.initialiser);
@@ -614,7 +614,9 @@ class InvocationExpression implements Expression {
   String toTree(int indent) {
     return "${this.runtimeType}"
         .indent(indent)
-        .newline(callee.toTree(indent + 2));
+        .newline(callee.toTree(indent + 2))
+        .newline(
+            arguments.map((e) => e.toTree(indent + 2)).toList().join('\n'));
   }
 }
 
