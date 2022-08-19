@@ -1,6 +1,7 @@
 library mochaccino.sdk.compiler;
 
 import 'package:mochaccino_sdk/barista/lib/interface/interface.dart';
+import 'package:mochaccino_sdk/barista/lib/interface/interface.dart';
 import './runtime/runtime.dart';
 import './runtime/moccTypes.dart';
 import './runtime/dart_port.dart';
@@ -8,10 +9,10 @@ import 'dart:io';
 
 part './compiler.dart';
 part './tokeniser.dart';
-part './parser.dart';
+part './parser/parser.dart';
+part './parser/resolver.dart';
 part './interpreter.dart';
 part './error_handler.dart';
-part './symbols.dart';
 
 class CompilerEntryPoint {
   static void executeFile(String fpath, bool debugMode) {
@@ -27,9 +28,14 @@ class CompilerEntryPoint {
       CompileJob(File(fpath).readAsStringSync(), fpath),
     );
     compJobProc.complete();
+    ErrorHandler.lines.addAll(compiler.compileJob.source.split('\n'));
     final CompileResult compileResult = compiler.compile();
     for (ConsoleLog log in compileResult.logs) {
       Interface.write(log.msg, log.logType, log.source);
+    }
+
+    for (Issue i in ErrorHandler.issues) {
+      Interface.writeErr(i.consoleString, i.source);
     }
 
     Interface.writeInfo(

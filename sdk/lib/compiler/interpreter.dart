@@ -4,22 +4,36 @@ class Interpreter {
   final List<Statement> statements;
   final CompileJob compileJob;
   final List<String> sourceLines = [];
+  final Map<Expression, int> locals = {};
   Environment environment = Environment();
   late Environment _global;
 
   Interpreter(this.statements, this.compileJob) {
-    sourceLines.addAll(compileJob.source.split('\n'));
+    sourceLines.addAll(ErrorHandler.lines);
     environment.compileJob = compileJob;
     _global = environment;
+    _loadPortedObjects();
+  }
+
+  void resolve(Expression expr, int depth) {
+    locals[expr] = depth;
   }
 
   void _loadPortedObjects() {
     environment.defineObject('log', Log());
   }
 
+  MoccObj lookupVariable(Token name, Expression expr) {
+    final int? distance = locals[expr];
+    if (distance != null) {
+      return environment.getAt(distance, name.lexeme);
+    } else {
+      return _global.getObject(name);
+    }
+  }
+
   void interpret() {
     try {
-      _loadPortedObjects();
       for (Statement stmt in statements) {
         interpretStmt(stmt);
       }
@@ -62,7 +76,7 @@ class Interpreter {
   }
 
   void interpretFuncDecl(FuncDecl decl) {
-    final MoccFn function = MoccFn(decl);
+    final MoccFn function = MoccFn(decl, environment);
     environment.defineObject(decl.name.lexeme, function);
   }
 
@@ -106,13 +120,18 @@ class Interpreter {
     environment.defineObject(stmt.name.lexeme, value);
   }
 
-  MoccObject interpretVarReference(VariableReference expr) {
-    return environment.getObject(expr.name);
+  MoccObj interpretVarReference(VariableReference expr) {
+    return lookupVariable(expr.name, expr);
   }
 
   Object? interpretVarAssignment(VariableAssignment expr) {
     Object? value = evaluateExpression(expr.value);
-    environment.redefineObject(expr.name, value);
+    final int? distance = locals[expr];
+    if (distance != null) {
+      environment.assignAt(distance, expr.name, value.toMoccObject());
+    } else {
+      _global.redefineObject(expr.name, value);
+    }
     return value;
   }
 
@@ -330,7 +349,7 @@ class Interpreter {
 
   Object? interpretInvocationExpression(InvocationExpression invocation) {
     Object? callee = evaluateExpression(invocation.callee);
-    final List<MoccObject> arguments = [];
+    final List<MoccObj> arguments = [];
     for (Expression argument in invocation.arguments) {
       /// These should be [Value]s, but a [VariableReference] is passed
       arguments.add(evaluateExpression(argument).toMoccObject());
@@ -356,27 +375,27 @@ class Interpreter {
 }
 
 extension ObjectUtils on Object? {
-  MoccObject toMoccObject() {
-    if (this is MoccObject) return this as MoccObject;
+  MoccObj toMoccObject() {
+    if (this is MoccObj) return this as MoccObj;
     if (this == null) return const MoccNull();
     if (this is int) return MoccInt(this as int);
     if (this is double) return MoccDbl(this as double);
     if (this is bool) return MoccBool(this as bool);
     if (this is String) return MoccStr(this as String);
-    return MoccDyn(this as dynamic);
+    /* if (this is dynamic) */ return MoccDyn(this as dynamic);
   }
 }
 
 class Parameters {
   final List<Map<String, Type>> positionalArgs;
-  final Map<String, Map<MoccType, MoccObject>> namedArgs;
+  final Map<String, Map<MoccType, MoccObj>> namedArgs;
 
   Parameters({required this.positionalArgs, required this.namedArgs});
 }
 
 class Arguments {
-  final List<MoccObject> positionalArgs;
-  final Map<String, MoccObject> namedArgs;
+  final List<MoccObj> positionalArgs;
+  final Map<String, MoccObj> namedArgs;
 
   const Arguments({this.positionalArgs = const [], this.namedArgs = const {}});
 

@@ -4,6 +4,7 @@ class ErrorHandler {
   static final List<Issue> issues = [];
   static String currentFileName = 'main.mocc';
   static String currentFilePath = '<ANONYMOUS>';
+  static final List<String> lines = [];
 }
 
 abstract class Issue implements Exception {
@@ -119,6 +120,23 @@ class ArgumentError extends Issue {
 
   static String wrongNumberOfArguments(int expectedCount, int argsCount) =>
       "Expected $expectedCount positional arguments, but $argsCount provided";
+}
+
+class NameError extends Issue {
+  NameError(
+    super.title, {
+    required super.lineNo,
+    required super.offendingLine,
+    required super.start,
+    required super.description,
+    required super.source,
+  });
+
+  static String alreadyDefined(Token name) =>
+      "Name '${name.lexeme}' already defined in this scope";
+
+  static String accessSelfInInitialiser(String name) =>
+      "The name '$name' can't be used in its own initialiser";
 }
 
 abstract class StableException implements Exception {}

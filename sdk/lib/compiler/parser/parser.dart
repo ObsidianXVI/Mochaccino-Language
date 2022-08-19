@@ -14,9 +14,10 @@ class Parser extends CompileComponent {
   List<Statement> parse() {
     final List<Statement> statements = [];
     while (!atEnd) {
-      Statement? stmt = parseDeclaration();
+      final Statement? stmt = parseDeclaration();
       if (stmt != null) statements.add(stmt);
     }
+
     // DEBUG: print out generated tokens
     if (Interface.debugMode) {
       for (Statement stmt in statements) {
@@ -69,7 +70,8 @@ class Parser extends CompileComponent {
       if (match([TokenType.FUNC])) return parseFuncDecl('function');
       if (match([TokenType.VAR])) return parseVarDecl();
       return parseStatement();
-    } catch (e) {
+    } on Issue catch (e) {
+      ErrorHandler.issues.add(e);
       synchronize();
       return null;
     }
@@ -101,7 +103,7 @@ class Parser extends CompileComponent {
     }
     consume(TokenType.RIGHT_PAREN, "Expected ')' after parameter list.");
     consume(TokenType.LEFT_BRACE, "Expected '{' before $kind body.");
-    final List<Statement?> body = parseBlock();
+    final List<Statement> body = parseBlock();
     return FuncDecl(name, parameters, body);
   }
 
@@ -131,11 +133,12 @@ class Parser extends CompileComponent {
     return parseExpressionStmt();
   }
 
-  List<Statement?> parseBlock() {
-    final List<Statement?> statements = [];
+  List<Statement> parseBlock() {
+    final List<Statement> statements = [];
 
     while (!check(TokenType.RIGHT_BRACE) && !atEnd) {
-      statements.add(parseDeclaration());
+      final Statement? stmt = parseDeclaration();
+      if (stmt != null) statements.add(stmt);
     }
 
     consume(TokenType.RIGHT_BRACE, "Expected '}' after block.");
@@ -348,23 +351,31 @@ class Parser extends CompileComponent {
   }
 
   Expression parseValue() {
-    if (match([TokenType.FALSE])) return Value(false);
+    late Expression raw;
+    if (match([TokenType.FALSE])) raw = Value(false);
 
-    if (match([TokenType.TRUE])) return Value(true);
+    if (match([TokenType.TRUE])) raw = Value(true);
 
-    if (match([TokenType.NULL])) return Value(null);
+    if (match([TokenType.NULL])) raw = Value(null);
 
-    if (match([TokenType.NUMBER, TokenType.STRING]))
-      return Value(previous().literal);
+    if (match([TokenType.NUMBER, TokenType.STRING])) {
+      raw = Value(previous().literal);
+    }
 
     if (match([TokenType.IDENTIFIER])) {
-      return VariableReference(previous());
+      raw = VariableReference(previous());
     }
 
     if (match([TokenType.LEFT_PAREN])) {
       Expression expr = parseExpression();
       consume(TokenType.RIGHT_PAREN, ')');
-      return Group(expr);
+      raw = Group(expr);
+    }
+
+    print(previous());
+
+    if (match([TokenType.ANGLED_LEFT])) {
+      print('fouund: ${previous().lexeme}');
     }
 
     throw SyntaxError(
@@ -493,7 +504,7 @@ class ReturnStmt extends Statement {
 }
 
 class BlockStmt extends Statement {
-  final List<Statement?> statements;
+  final List<Statement> statements;
 
   BlockStmt(this.statements);
 
@@ -501,7 +512,7 @@ class BlockStmt extends Statement {
   String toTree(int indent) => "${this.runtimeType}".indent(indent)
     ..newline(
       statements
-          .map((Statement? s) => s?.toTree(indent).indent(indent + 2))
+          .map((Statement s) => s.toTree(indent).indent(indent + 2))
           .toList()
           .join('\n'),
     );
@@ -559,16 +570,24 @@ class FuncDecl extends Statement {
   late Token name;
   late List<Token> params;
   late Parameters parameters;
-  late List<Statement?> body;
+  late List<Statement> body;
+  late Type returnType;
 
   FuncDecl(this.name, this.params, this.body) {
     parameters = Parameters(
       positionalArgs: params.map((e) => {e.lexeme: MoccDyn}).toList(),
       namedArgs: const {},
     );
+    if (body.isNotEmpty) {
+      if (body.last is ReturnStmt) {
+        returnType = (body.last as ReturnStmt).value.toMoccObject().runtimeType;
+      } else {
+        returnType = MoccVoid;
+      }
+    }
   }
 
-  FuncDecl.portedFn(String name, this.parameters) {
+  FuncDecl.portedFn(String name, this.parameters, this.returnType) {
     this.name = Token(TokenType.IDENTIFIER, name, lineNo: 0, start: 0);
     params = [];
     body = [];

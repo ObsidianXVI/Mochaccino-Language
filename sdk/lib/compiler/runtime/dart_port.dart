@@ -17,27 +17,33 @@ abstract class MetaObject extends MoccType {
 }
 
 @PortedObject()
-abstract class MoccObject extends MoccType {
+abstract class MoccObj extends MoccType {
   final dynamic innerValue;
 
-  const MoccObject(this.innerValue);
+  const MoccObj(this.innerValue);
 
   MoccInt get objectHash => MoccInt(hashCode);
 
   MoccType get objectType => this;
 
   MoccStr toMoccString() {
-    return MoccStr(innerValue.toString());
+    if (this is Primitive) {
+      return MoccStr(
+        runtimeType.toString().replaceAll("Mocc", "").toLowerCase(),
+      );
+    } else {
+      return toMoccString();
+    }
   }
 }
 
 @PortedObject()
-abstract class Primitive extends MoccObject {
+abstract class Primitive extends MoccObj {
   const Primitive(super.innerValue);
 }
 
 @PortedObject()
-abstract class Composite extends MoccObject {
+abstract class Composite extends MoccObj {
   const Composite(super.innerValue);
 }
 
@@ -76,17 +82,18 @@ class MoccNull extends MoccVoid {
 ////////////////////////
 
 abstract class MoccInv extends Composite {
-  const MoccInv() : super(null);
+  const MoccInv(super.innerValue);
 
-  MoccObject call(Interpreter interpreter, Arguments args);
+  MoccObj call(Interpreter interpreter, Arguments args);
 }
 
 class MoccFn extends MoccInv {
   final FuncDecl declaration;
-  MoccFn(this.declaration);
+  final Environment _closure;
+  MoccFn(this.declaration, this._closure) : super(declaration);
 
-  Environment runPreExecTasks(Interpreter interpreter, Arguments args) {
-    final Environment environment = Environment(interpreter.environment);
+  Environment createEnvironment(Interpreter interpreter, Arguments args) {
+    final Environment environment = Environment(_closure);
     for (int i = 0; i < declaration.params.length; i++) {
       environment.defineObject(
           declaration.params[i].lexeme, args.positionalArgs[i]);
@@ -95,14 +102,20 @@ class MoccFn extends MoccInv {
   }
 
   @override
-  MoccObject call(Interpreter interpreter, Arguments args) {
-    final Environment environment = runPreExecTasks(interpreter, args);
+  MoccObj call(Interpreter interpreter, Arguments args) {
+    final Environment environment = createEnvironment(interpreter, args);
     try {
       interpreter.executeBlock(declaration.body, environment);
     } on Return catch (e) {
       return e.value.toMoccObject();
     }
     return const MoccNull();
+  }
+
+  @override
+  MoccStr toMoccString() {
+    return MoccStr(
+        "${declaration.name.lexeme}<fn<${declaration.returnType.asMoccType}>>");
   }
 }
 
@@ -116,19 +129,27 @@ class Log extends MoccFn {
             Parameters(positionalArgs: [
               {'msg': MoccStr}
             ], namedArgs: {}),
+            MoccVoid,
           ),
+          coreLibEnv,
         );
 
   @override
   MoccVoid call(Interpreter interpreter, Arguments args) {
-    final Environment environment = runPreExecTasks(interpreter, args);
+    final Environment environment = createEnvironment(interpreter, args);
 
-    Interface.write(args.positionalArgs.first.innerValue.toString(),
+    Interface.write(args.positionalArgs.first.toMoccString().innerValue,
         LogType.log, Source.program);
     return const MoccNull();
   }
 }
 
-extension MapUtils on Map<String, MoccObject> {
-  MoccObject get(String name) => this[name]!;
+extension MapUtils on Map<String, MoccObj> {
+  MoccObj get(String name) => this[name]!;
+}
+
+extension TypeUtils on Type {
+  String get asMoccType {
+    return toString().replaceAll("Mocc", "").toLowerCase();
+  }
 }

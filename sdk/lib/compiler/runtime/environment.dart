@@ -2,13 +2,30 @@ part of mochaccino.sdk.compiler.runtime;
 
 class Environment {
   late CompileJob compileJob;
-  final Map<String, MoccObject> values = {};
+  final Map<String, MoccObj> values = {};
   final Environment? outer;
 
   Environment([this.outer = null]);
 
   void defineObject(String name, Object? value) {
     values[name] = value.toMoccObject();
+  }
+
+  MoccObj getAt(int distance, String name) {
+    return ancestor(distance).values.get(name);
+  }
+
+  void assignAt(int distance, Token name, MoccObj value) {
+    ancestor(distance).values[name.lexeme] = value;
+  }
+
+  Environment ancestor(int distance) {
+    Environment environment = this;
+    for (int i = 0; i < distance; i++) {
+      environment = environment.outer!;
+    }
+
+    return environment;
   }
 
   void redefineObject(Token name, Object? value) {
@@ -29,7 +46,7 @@ class Environment {
     }
   }
 
-  MoccObject getObject(Token token) {
+  MoccObj getObject(Token token) {
     if (values.containsKey(token.lexeme)) {
       return values[token.lexeme]!;
     } else if (outer != null) {
@@ -47,3 +64,5 @@ class Environment {
     }
   }
 }
+
+final Environment coreLibEnv = Environment();

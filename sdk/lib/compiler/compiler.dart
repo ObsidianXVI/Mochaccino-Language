@@ -33,7 +33,19 @@ class Compiler extends CompileComponent {
       compileResult,
       compileJob,
     );
+
+    if (ErrorHandler.issues.isNotEmpty) {
+      compileResult.logs.add(ConsoleLog(
+        LogType.warn,
+        "Aborting analysis and interpretation of code due to parse errors",
+        Source.compiler,
+      ));
+      return compileResult;
+    }
+
     final Interpreter interpreter = Interpreter(parser.parse(), compileJob);
+    final NameResolver nameResolver = NameResolver(interpreter);
+    nameResolver.resolve(interpreter.statements);
     interpreter.interpret();
     return compileResult;
   }

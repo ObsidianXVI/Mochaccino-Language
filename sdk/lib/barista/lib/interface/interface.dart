@@ -15,6 +15,7 @@ enum Source {
   tokeniser,
   parser,
   interpreter,
+  analyser,
   program,
 }
 

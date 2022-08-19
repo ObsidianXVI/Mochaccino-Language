@@ -1,5 +1,4 @@
-log("HELLO");
 func print(msg) {
     log(msg);
 }
-print(1);
+log(log);
