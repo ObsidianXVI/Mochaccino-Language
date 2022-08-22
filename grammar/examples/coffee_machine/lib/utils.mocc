@@ -1,0 +1,9 @@
+package mocaff.utils;
+
+inlclude math;
+
+module Utils {
+    func generateId<str> {
+        return "#" + Random.alphaNum(); 
+    }
+}

@@ -1,0 +1,29 @@
+package mocaff.interface;
+
+dock {
+    "cli-libs/interface" as i;
+}
+
+struct DrinkSize : enum {
+    prop S;
+    prop M;
+    prop L;
+    prop XL;
+}
+
+module Interface {
+    func write(msg<str>)<void> {
+        i.log(msg);
+    }
+
+    func readInput(prompt<str> = "")<str> {
+        return i.askForInputSync(prompt).response;
+    }
+
+    func newOrder<void, none> {
+        var ds<DrinkSize> = readInput("Drink size: ")<DrinkSize>;
+        var customerId<str> = Utils.generateId();
+        Machine.createJob(customerId, ds); // BINGO
+        write("Order placed! Your queue number is " + customerId);
+    }
+}

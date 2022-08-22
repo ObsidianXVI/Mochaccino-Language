@@ -1,0 +1,7 @@
+package mocaff.exceptions;
+
+struct JobException extends Exception {
+    var customerId<str>;
+
+    JobException(customerId) {}
+}

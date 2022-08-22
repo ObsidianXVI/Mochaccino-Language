@@ -1,0 +1,22 @@
+package main;
+
+include interface;
+include machine;
+include printer;
+include db;
+
+module Main implements EntryPoint {
+    func main<void, none> {
+        Machine.activate();
+        
+        while(Machine.active) { // uh oh
+            Interface.newOrder();
+        }
+
+        var reportStatus<DBResult> = await DB.sendReports(Machine.report, Printer.report, Interface.report);
+
+        if (!reportStatus.success) {
+            throw Exception("Failed to send report");
+        }
+    }
+}

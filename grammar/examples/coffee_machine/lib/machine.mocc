@@ -1,0 +1,43 @@
+package mocaff.machine;
+
+include types.db;
+
+collection JobRequest {
+    customerId<str>;
+    drinkSize<DrinkSize>;
+}
+
+struct JobState : enum {
+    prop ready;
+    prop scheduled;
+    prop processing;
+    prop complete;
+}
+
+struct Job {
+    var customerId<str>;
+    var drinkSize<DrinkSize>;
+
+    Job(customerId, drinkSize) {
+        if (JobQueue.isFull) {
+            throw JobException(customerId);
+        }
+    }
+}
+
+struct JobQueue {
+    static var isFull<bool> = false;
+    static var queue<db<Job, JobState>> = ();
+}
+
+module Machine {
+    active: false;
+    func activate<void, none> {
+        active: true;
+    }
+    
+    func createJob<Job, JobRequest> {
+        JobQueue.queue.insert(Job(customerId, drinkSize) : JobState.ready);
+        return JobQueue.queue.queryById(customerId);
+    }
+}
