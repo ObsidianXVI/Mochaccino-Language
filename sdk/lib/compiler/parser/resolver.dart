@@ -88,6 +88,7 @@ class NameResolver {
       define(param);
     }
     resolve(decl.body);
+
     endScope();
     _currentFunction = enclosingFunction;
   }
@@ -179,7 +180,7 @@ class NameResolver {
     final Map<String, bool> scope = scopes.peek();
     if (scope.containsKey(name.lexeme)) {
       throw NameError(
-       NameError.alreadyDefined(name),
+        NameError.alreadyDefined(name),
         lineNo: name.lineNo,
         offendingLine: ErrorHandler.lines[name.lineNo],
         start: name.start,
@@ -210,5 +211,5 @@ class Stack<E> {
   void push(E element) => stack.add(element);
   E pop() => stack.removeLast();
   E peek() => stack.last;
-  E get(int index) => stack.removeAt(index);
+  E get(int index) => stack[index];
 }

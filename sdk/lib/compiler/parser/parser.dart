@@ -306,13 +306,11 @@ class Parser extends CompileComponent {
       Expression right = parseValue();
       return UnaryExp(UnaryPrefixOp(op), right);
     }
-
     return parseInvCall();
   }
 
   Expression parseInvCall() {
     Expression expr = parseValue();
-
     while (true) {
       if (match([TokenType.LEFT_PAREN])) {
         expr = parseArgs(expr);
@@ -320,7 +318,6 @@ class Parser extends CompileComponent {
         break;
       }
     }
-
     return expr;
   }
 
@@ -351,28 +348,24 @@ class Parser extends CompileComponent {
   }
 
   Expression parseValue() {
-    late Expression raw;
-    if (match([TokenType.FALSE])) raw = Value(false);
+    if (match([TokenType.FALSE])) return Value(false);
+    if (match([TokenType.TRUE])) return Value(true);
 
-    if (match([TokenType.TRUE])) raw = Value(true);
-
-    if (match([TokenType.NULL])) raw = Value(null);
+    if (match([TokenType.NULL])) return Value(null);
 
     if (match([TokenType.NUMBER, TokenType.STRING])) {
-      raw = Value(previous().literal);
+      return Value(previous().literal);
     }
 
     if (match([TokenType.IDENTIFIER])) {
-      raw = VariableReference(previous());
+      return VariableReference(previous());
     }
 
     if (match([TokenType.LEFT_PAREN])) {
       Expression expr = parseExpression();
       consume(TokenType.RIGHT_PAREN, ')');
-      raw = Group(expr);
+      return Group(expr);
     }
-
-    print(previous());
 
     if (match([TokenType.ANGLED_LEFT])) {
       print('fouund: ${previous().lexeme}');
@@ -451,7 +444,7 @@ class Parser extends CompileComponent {
   Token consume(TokenType type, String expectedChar) {
     if (check(type)) return advance();
     throw SyntaxError(
-      SyntaxError.unterminatedPair(expectedChar),
+      SyntaxError.unexpectedChar(peek().lexeme),
       lineNo: peek().lineNo,
       start: peek().start,
       offendingLine: sourceLines[peek().lineNo],

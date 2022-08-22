@@ -1,0 +1,5 @@
+func abc(a) {
+    log(a);
+}
+
+abc(1);

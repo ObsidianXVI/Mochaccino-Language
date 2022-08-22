@@ -40,6 +40,9 @@ abstract class MoccObj extends MoccType {
 @PortedObject()
 abstract class Primitive extends MoccObj {
   const Primitive(super.innerValue);
+
+  @override
+  MoccStr toMoccString() => MoccStr(innerValue.toString());
 }
 
 @PortedObject()
