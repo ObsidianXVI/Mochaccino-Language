@@ -1,10 +1,15 @@
 struct Mocca {
-
+    func defo() {
+        log("DEFO");
+    }
 }
 
 var m = Mocca();
 
-m.hello = 1;
-m.yes = true;
-log(m.hello);
-log(m.yes);
+func bellow(msg) {
+    log(msg);
+}
+
+m.scream = bellow;
+m.scream("YEEE");
+m.defo();

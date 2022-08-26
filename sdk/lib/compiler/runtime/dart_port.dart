@@ -126,7 +126,16 @@ class MoccFn extends MoccInv {
 @PortedObject()
 class MoccStruct extends MoccInv {
   final String name;
-  const MoccStruct(this.name) : super(name);
+  final Map<String, MoccFn> methods;
+  const MoccStruct(this.name, this.methods) : super(name);
+
+  MoccFn? findMethod(String name) {
+    if (methods.containsKey(name)) {
+      return methods[name]!;
+    } else {
+      return null;
+    }
+  }
 
   @override
   MoccObj call(Interpreter interpreter, Arguments args) {
@@ -150,8 +159,10 @@ class MoccObjectInstance extends MoccObj {
     if (fields.containsKey(name.lexeme)) {
       return fields.get(name.lexeme);
     }
-    print(name.lexeme);
-    print(fields.toString());
+
+    MoccFn? method = struct.findMethod(name.lexeme);
+    if (method != null) return method;
+
     throw NameError(
       NameError.undefinedName(name.lexeme),
       lineNo: name.lineNo,

@@ -3,6 +3,7 @@ part of mochaccino.sdk.compiler;
 enum FunctionType {
   none,
   function,
+  method,
 }
 
 class NameResolver {
@@ -45,6 +46,9 @@ class NameResolver {
   void resolveStructDecl(StructDecl stmt) {
     declare(stmt.name);
     define(stmt.name);
+    for (FuncDecl method in stmt.methods) {
+      resolveFunctionBody(method, FunctionType.method);
+    }
   }
 
   void resolveWhileStmt(WhileStmt stmt) {

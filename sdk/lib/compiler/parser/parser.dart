@@ -84,7 +84,7 @@ class Parser extends CompileComponent {
 
     final List<FuncDecl> methods = [];
     while (!check(TokenType.RIGHT_BRACE) && !atEnd) {
-      methods.add(parseFuncDecl("method"));
+      if (match([TokenType.FUNC])) methods.add(parseFuncDecl("method"));
     }
 
     consume(TokenType.RIGHT_BRACE, "Expected '}' after struct body.");

@@ -72,7 +72,13 @@ class Interpreter {
 
   void interpretStructDecl(StructDecl stmt) {
     environment.defineObject(stmt.name.lexeme, null);
-    final MoccStruct struct = MoccStruct(stmt.name.lexeme);
+    final Map<String, MoccFn> methods = {};
+    for (FuncDecl method in stmt.methods) {
+      MoccFn function = MoccFn(method, environment);
+      methods[method.name.lexeme] = function;
+    }
+
+    final MoccStruct struct = MoccStruct(stmt.name.lexeme, methods);
     environment.redefineObject(stmt.name, struct);
   }
 
