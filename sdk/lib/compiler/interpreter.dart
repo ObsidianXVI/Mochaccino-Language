@@ -65,7 +65,15 @@ class Interpreter {
       interpretFuncDecl(stmt);
     } else if (stmt is ReturnStmt) {
       interpretReturnStmt(stmt);
+    } else if (stmt is StructDecl) {
+      interpretStructDecl(stmt);
     }
+  }
+
+  void interpretStructDecl(StructDecl stmt) {
+    environment.defineObject(stmt.name.lexeme, null);
+    final MoccStruct struct = MoccStruct(stmt.name.lexeme);
+    environment.redefineObject(stmt.name, struct);
   }
 
   void interpretReturnStmt(ReturnStmt stmt) {
@@ -365,12 +373,18 @@ class Interpreter {
             "A value of type [${callee.runtimeType}] can't be invoked.",
         source: Source.interpreter,
       );
+    } else if (callee is MoccFn) {
+      final MoccFn moccInovation = callee;
+      final Arguments args = Arguments(positionalArgs: arguments);
+      args.checkArity(moccInovation.declaration.parameters, invocation.paren,
+          sourceLines[invocation.paren.lineNo]);
+      return moccInovation.call(this, args);
+    } else if (callee is MoccStruct) {
+      final MoccStruct struct = callee;
+      return struct.call(this, Arguments(positionalArgs: arguments));
+    } else {
+      throw UnimplementedError();
     }
-    MoccFn moccInovation = callee as MoccFn;
-    final Arguments args = Arguments(positionalArgs: arguments);
-    args.checkArity(moccInovation.declaration.parameters, invocation.paren,
-        sourceLines[invocation.paren.lineNo]);
-    return moccInovation.call(this, args);
   }
 }
 

@@ -1,5 +1,7 @@
-func abc(a) {
-    log(a);
+struct Mocca {
+
 }
 
-abc(1);
+log(Mocca);
+var m = Mocca();
+log(m);

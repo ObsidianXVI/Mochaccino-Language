@@ -1,5 +1,7 @@
 library mochaccino.sdk.compiler;
 
+import 'dart:ffi';
+
 import 'package:mochaccino_sdk/barista/lib/interface/interface.dart';
 import 'package:mochaccino_sdk/barista/lib/interface/interface.dart';
 import './runtime/runtime.dart';

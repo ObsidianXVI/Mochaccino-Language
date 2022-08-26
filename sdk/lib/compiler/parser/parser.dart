@@ -69,6 +69,7 @@ class Parser extends CompileComponent {
     try {
       if (match([TokenType.FUNC])) return parseFuncDecl('function');
       if (match([TokenType.VAR])) return parseVarDecl();
+      if (match([TokenType.STRUCT])) return parseStructDecl();
       return parseStatement();
     } on Issue catch (e) {
       ErrorHandler.issues.add(e);
@@ -77,7 +78,21 @@ class Parser extends CompileComponent {
     }
   }
 
-  Statement parseFuncDecl(String kind) {
+  Statement parseStructDecl() {
+    final Token name = consume(TokenType.IDENTIFIER, "Expected struct name.");
+    consume(TokenType.LEFT_BRACE, "Expected '{' before struct body.");
+
+    final List<FuncDecl> methods = [];
+    while (!check(TokenType.RIGHT_BRACE) && !atEnd) {
+      methods.add(parseFuncDecl("method"));
+    }
+
+    consume(TokenType.RIGHT_BRACE, "Expected '}' after struct body.");
+
+    return StructDecl(name, methods);
+  }
+
+  FuncDecl parseFuncDecl(String kind) {
     final Token name = consume(TokenType.IDENTIFIER, "Expected $kind name.");
     consume(TokenType.LEFT_PAREN, "Expected '(' after $kind name.");
     final List<Token> parameters = [];
@@ -544,6 +559,16 @@ class InitialiserStmt extends Statement {
               : Value(null).toTree(indent + 4),
         );
   }
+}
+
+class StructDecl extends Statement {
+  final Token name;
+  final List<FuncDecl> methods;
+
+  StructDecl(this.name, this.methods);
+
+  @override
+  String toTree(int indent) => "${runtimeType.toString()} ${name.lexeme}";
 }
 
 class OkStmt extends Statement {

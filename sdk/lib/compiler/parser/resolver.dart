@@ -37,7 +37,14 @@ class NameResolver {
       resolveReturnStmt(stmt);
     } else if (stmt is WhileStmt) {
       resolveWhileStmt(stmt);
+    } else if (stmt is StructDecl) {
+      resolveStructDecl(stmt);
     }
+  }
+
+  void resolveStructDecl(StructDecl stmt) {
+    declare(stmt.name);
+    define(stmt.name);
   }
 
   void resolveWhileStmt(WhileStmt stmt) {

@@ -83,13 +83,14 @@ class MoccNull extends MoccVoid {
 }
 
 ////////////////////////
-
+@PortedObject()
 abstract class MoccInv extends Composite {
   const MoccInv(super.innerValue);
 
   MoccObj call(Interpreter interpreter, Arguments args);
 }
 
+@PortedObject()
 class MoccFn extends MoccInv {
   final FuncDecl declaration;
   final Environment _closure;
@@ -122,6 +123,34 @@ class MoccFn extends MoccInv {
   }
 }
 
+@PortedObject()
+class MoccStruct extends MoccInv {
+  final String name;
+  const MoccStruct(this.name) : super(name);
+
+  @override
+  MoccObj call(Interpreter interpreter, Arguments args) {
+    final MoccObjectInstance instance = MoccObjectInstance(this);
+    return instance;
+  }
+
+  @override
+  MoccStr toMoccString() {
+    return MoccStr(name);
+  }
+}
+
+@PortedObject()
+class MoccObjectInstance extends MoccObj {
+  final MoccStruct struct;
+  const MoccObjectInstance(this.struct) : super(struct);
+
+  @override
+  MoccStr toMoccString() {
+    return MoccStr("${struct.toMoccString().innerValue} object");
+  }
+}
+
 ///////////////////////
 
 class Log extends MoccFn {
@@ -140,7 +169,6 @@ class Log extends MoccFn {
   @override
   MoccVoid call(Interpreter interpreter, Arguments args) {
     final Environment environment = createEnvironment(interpreter, args);
-
     Interface.write(args.positionalArgs.first.toMoccString().innerValue,
         LogType.log, Source.program);
     return const MoccNull();
