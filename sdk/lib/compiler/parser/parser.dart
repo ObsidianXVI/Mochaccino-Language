@@ -329,6 +329,10 @@ class Parser extends CompileComponent {
     while (true) {
       if (match([TokenType.LEFT_PAREN])) {
         expr = parseArgs(expr);
+      } else if (match([TokenType.DOT])) {
+        Token name =
+            consume(TokenType.IDENTIFIER, "Expected property name after '.'");
+        expr = GetExpression(expr, name);
       } else {
         break;
       }
@@ -408,6 +412,8 @@ class Parser extends CompileComponent {
       if (expr is VariableReference) {
         Token name = expr.name;
         return VariableAssignment(name, value);
+      } else if (expr is GetExpression) {
+        return SetExpression(expr.object, expr.name, value);
       }
 
       ErrorHandler.issues.add(
@@ -664,6 +670,35 @@ class VariableReference implements Expression {
 
   @override
   String toTree(int indent) => "MoccObject: ${name.lexeme}".indent(indent);
+}
+
+class GetExpression implements Expression {
+  final Token name;
+  final Expression object;
+
+  GetExpression(this.object, this.name);
+
+  @override
+  String toTree(int indent) => "GET ${name.lexeme}"
+      .newline("OF".indent(indent + 2))
+      .indent(indent + 4)
+      .newline(object.toTree(indent + 6));
+}
+
+class SetExpression implements Expression {
+  final Expression object;
+  final Token name;
+  final Expression value;
+
+  SetExpression(this.object, this.name, this.value);
+
+  @override
+  String toTree(int indent) => "SET ${name.lexeme}"
+      .indent(indent)
+      .newline("OF: ${object.toTree(indent + 4)}")
+      .indent(indent + 2)
+      .newline("TO: ${value.toTree(indent + 4)}")
+      .indent(indent + 2);
 }
 
 abstract class BinaryExp implements Expression {

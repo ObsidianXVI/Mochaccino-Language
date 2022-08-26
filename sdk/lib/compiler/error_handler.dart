@@ -30,7 +30,7 @@ abstract class Issue implements Exception {
 ${toString().replaceAll("Instance of '", '').replaceAll("'", '')}: $title
   $description
   [$fileName:$lineNo]:
-    $lineNo| $offendingLine
+    ${lineNo + 1}| $offendingLine
 """;
   }
 }
@@ -60,6 +60,10 @@ class SyntaxError extends Issue {
   static String unexpectedChar(String char) => "Unexpected character '$char'";
   static String unexpectedToken(Token token) =>
       "Unexpected token '${token.lexeme}'";
+  static String invalidPropertyAccess() =>
+      "Property access can only be used on struct instances";
+  static String invalidFieldAccess() =>
+      "Field access can only be used on struct instances";
 }
 
 class TypeError extends Issue {
@@ -86,7 +90,7 @@ class ReferenceError extends Issue {
     required super.description,
     required super.source,
   });
-  static String undefinedObject(String name) => "Object '$name' not defined";
+  static String undefinedObject(String name) => "Name '$name' not defined";
   static String invalidAssignmentTarget(String name) =>
       "'$name' is an invalid assignment target";
 }
@@ -137,6 +141,8 @@ class NameError extends Issue {
 
   static String accessSelfInInitialiser(String name) =>
       "The name '$name' can't be used in its own initialiser";
+
+  static String undefinedName(String name) => "The name '$name' is not defined";
 }
 
 abstract class StableException implements Exception {}

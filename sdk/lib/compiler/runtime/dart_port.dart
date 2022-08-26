@@ -143,7 +143,29 @@ class MoccStruct extends MoccInv {
 @PortedObject()
 class MoccObjectInstance extends MoccObj {
   final MoccStruct struct;
-  const MoccObjectInstance(this.struct) : super(struct);
+  final Map<String, MoccObj> fields = {};
+  MoccObjectInstance(this.struct) : super(struct);
+
+  MoccObj get(Token name) {
+    if (fields.containsKey(name.lexeme)) {
+      return fields.get(name.lexeme);
+    }
+    print(name.lexeme);
+    print(fields.toString());
+    throw NameError(
+      NameError.undefinedName(name.lexeme),
+      lineNo: name.lineNo,
+      offendingLine: ErrorHandler.lines[name.lineNo],
+      start: name.start,
+      description:
+          "The property '${name.lexeme}' is not defined for '${struct.name}'",
+      source: Source.interpreter,
+    );
+  }
+
+  void set(Token name, MoccObj value) {
+    fields[name.lexeme] = value;
+  }
 
   @override
   MoccStr toMoccString() {

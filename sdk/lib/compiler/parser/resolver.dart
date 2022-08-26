@@ -115,7 +115,20 @@ class NameResolver {
       resolveLogicalExpr(expr);
     } else if (expr is UnaryExp) {
       resolveUnaryExpr(expr);
+    } else if (expr is GetExpression) {
+      resolveGetExpression(expr);
+    } else if (expr is SetExpression) {
+      resolveSetExpression(expr);
     }
+  }
+
+  void resolveSetExpression(SetExpression expr) {
+    resolveExpression(expr.value);
+    resolveExpression(expr.object);
+  }
+
+  void resolveGetExpression(GetExpression expr) {
+    resolveExpression(expr.object);
   }
 
   void resolveUnaryExpr(UnaryExp expr) {

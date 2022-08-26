@@ -2,6 +2,9 @@ struct Mocca {
 
 }
 
-log(Mocca);
 var m = Mocca();
-log(m);
+
+m.hello = 1;
+m.yes = true;
+log(m.hello);
+log(m.yes);

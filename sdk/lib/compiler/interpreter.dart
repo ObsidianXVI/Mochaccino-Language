@@ -143,6 +143,42 @@ class Interpreter {
     return value;
   }
 
+  Object? interpretSetExpression(SetExpression expr) {
+    Object? object = evaluateExpression(expr.object);
+
+    if (object is! MoccObjectInstance) {
+      throw SyntaxError(
+        SyntaxError.invalidFieldAccess(),
+        lineNo: expr.name.lineNo,
+        offendingLine: sourceLines[expr.name.lineNo],
+        start: expr.name.start,
+        description: "description",
+        source: Source.interpreter,
+      );
+    }
+
+    Object? value = evaluateExpression(expr.value);
+    object.set(expr.name, value.toMoccObject());
+    return value;
+  }
+
+  Object? interpretGetExpression(GetExpression expr) {
+    final Object? object = evaluateExpression(expr.object);
+    if (object is MoccObjectInstance) {
+      return object.get(expr.name);
+    }
+
+    throw SyntaxError(
+      SyntaxError.invalidPropertyAccess(),
+      lineNo: expr.name.lineNo,
+      offendingLine: sourceLines[expr.name.lineNo],
+      start: expr.name.start,
+      description:
+          "Property access can only be performed on struct instances, but '${expr.name}' is not one.",
+      source: Source.interpreter,
+    );
+  }
+
   void interpretExpressionStmt(ExpressionStmt stmt) {
     evaluateExpression(stmt.expression);
   }
@@ -175,6 +211,10 @@ class Interpreter {
       return interpretVarAssignment(expr);
     } else if (expr is InvocationExpression) {
       return interpretInvocationExpression(expr);
+    } else if (expr is GetExpression) {
+      return interpretGetExpression(expr);
+    } else if (expr is SetExpression) {
+      return interpretSetExpression(expr);
     }
 
     return null;
