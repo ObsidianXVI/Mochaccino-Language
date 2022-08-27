@@ -1,15 +1,22 @@
 part of mochaccino.sdk.compiler;
 
+enum StructType {
+  none,
+  struct,
+}
+
 enum FunctionType {
   none,
   function,
   method,
+  initialiser,
 }
 
 class NameResolver {
   final Interpreter _interpreter;
   final Stack<Map<String, bool>> scopes = Stack<Map<String, bool>>();
   FunctionType _currentFunction = FunctionType.none;
+  StructType _currentStruct = StructType.none;
 
   NameResolver(this._interpreter);
 
@@ -44,11 +51,22 @@ class NameResolver {
   }
 
   void resolveStructDecl(StructDecl stmt) {
+    StructType enclosingStruct = _currentStruct;
+    _currentStruct = StructType.struct;
     declare(stmt.name);
     define(stmt.name);
+    beginScope();
+    scopes.peek()["this"] = true;
+
     for (FuncDecl method in stmt.methods) {
-      resolveFunctionBody(method, FunctionType.method);
+      FunctionType funcType = FunctionType.method;
+      if (method.name.lexeme == "init") {
+        funcType = FunctionType.initialiser;
+      }
+      resolveFunctionBody(method, funcType);
     }
+    endScope();
+    _currentStruct = enclosingStruct;
   }
 
   void resolveWhileStmt(WhileStmt stmt) {
@@ -65,6 +83,15 @@ class NameResolver {
         start: stmt.keyword.start,
         description:
             "'return' keyword can't be used in top-level code. Try removing the keyword.",
+        source: Source.analyser,
+      );
+    } else if (_currentFunction == FunctionType.initialiser) {
+      throw SyntaxError(
+        SyntaxError.invaludReturnKeyword(),
+        lineNo: stmt.keyword.lineNo,
+        offendingLine: ErrorHandler.lines[stmt.keyword.lineNo],
+        start: stmt.keyword.start,
+        description: "Try removing the 'return' keyword.",
         source: Source.analyser,
       );
     }
@@ -123,7 +150,24 @@ class NameResolver {
       resolveGetExpression(expr);
     } else if (expr is SetExpression) {
       resolveSetExpression(expr);
+    } else if (expr is ThisReference) {
+      resolveThisReference(expr);
     }
+  }
+
+  void resolveThisReference(ThisReference expr) {
+    if (_currentStruct == StructType.none) {
+      throw SyntaxError(
+        SyntaxError.invalidThisKeyword(),
+        lineNo: expr.keyword.lineNo,
+        offendingLine: ErrorHandler.lines[expr.keyword.lineNo],
+        start: expr.keyword.start,
+        description:
+            "Ensure that the keyword is placed inside the struct body, and check for other syntax errors.",
+        source: Source.analyser,
+      );
+    }
+    resolveLocal(expr, expr.keyword);
   }
 
   void resolveSetExpression(SetExpression expr) {

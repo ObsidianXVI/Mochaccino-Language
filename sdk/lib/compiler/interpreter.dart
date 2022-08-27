@@ -74,7 +74,8 @@ class Interpreter {
     environment.defineObject(stmt.name.lexeme, null);
     final Map<String, MoccFn> methods = {};
     for (FuncDecl method in stmt.methods) {
-      MoccFn function = MoccFn(method, environment);
+      MoccFn function =
+          MoccFn(method, environment, method.name.lexeme == "new");
       methods[method.name.lexeme] = function;
     }
 
@@ -90,7 +91,7 @@ class Interpreter {
   }
 
   void interpretFuncDecl(FuncDecl decl) {
-    final MoccFn function = MoccFn(decl, environment);
+    final MoccFn function = MoccFn(decl, environment, false);
     environment.defineObject(decl.name.lexeme, function);
   }
 
@@ -132,6 +133,10 @@ class Interpreter {
     }
 
     environment.defineObject(stmt.name.lexeme, value);
+  }
+
+  MoccObj interpretThisReference(ThisReference expr) {
+    return lookupVariable(expr.keyword, expr);
   }
 
   MoccObj interpretVarReference(VariableReference expr) {
@@ -221,6 +226,8 @@ class Interpreter {
       return interpretGetExpression(expr);
     } else if (expr is SetExpression) {
       return interpretSetExpression(expr);
+    } else if (expr is ThisReference) {
+      return interpretThisReference(expr);
     }
 
     return null;

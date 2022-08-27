@@ -64,6 +64,10 @@ class SyntaxError extends Issue {
       "Property access can only be used on struct instances";
   static String invalidFieldAccess() =>
       "Field access can only be used on struct instances";
+  static String invalidThisKeyword() =>
+      "The 'this' keyword can only be used inside structs";
+  static String invaludReturnKeyword() =>
+      "Return statements cannot be used in struct initialisers";
 }
 
 class TypeError extends Issue {

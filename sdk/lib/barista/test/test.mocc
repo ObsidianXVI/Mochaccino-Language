@@ -1,4 +1,7 @@
 struct Mocca {
+    func new() {
+        log("working...");
+    }
     func defo() {
         log("DEFO");
     }

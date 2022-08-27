@@ -65,6 +65,7 @@ enum TokenType {
   PROP,
   GET,
   SET,
+  THIS,
 
   // DEBUG FLAGS
   DEBUG_FLAG,

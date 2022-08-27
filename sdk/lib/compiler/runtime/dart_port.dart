@@ -94,7 +94,9 @@ abstract class MoccInv extends Composite {
 class MoccFn extends MoccInv {
   final FuncDecl declaration;
   final Environment _closure;
-  MoccFn(this.declaration, this._closure) : super(declaration);
+  final bool isInitializer;
+  MoccFn(this.declaration, this._closure, this.isInitializer)
+      : super(declaration);
 
   Environment createEnvironment(Interpreter interpreter, Arguments args) {
     final Environment environment = Environment(_closure);
@@ -105,6 +107,12 @@ class MoccFn extends MoccInv {
     return environment;
   }
 
+  MoccFn bind(MoccObjectInstance instance) {
+    Environment environment = Environment(_closure);
+    environment.defineObject("this", instance);
+    return MoccFn(declaration, environment, isInitializer);
+  }
+
   @override
   MoccObj call(Interpreter interpreter, Arguments args) {
     final Environment environment = createEnvironment(interpreter, args);
@@ -113,6 +121,7 @@ class MoccFn extends MoccInv {
     } on Return catch (e) {
       return e.value.toMoccObject();
     }
+    if (isInitializer) return _closure.getAt(0, "this");
     return const MoccNull();
   }
 
@@ -140,6 +149,10 @@ class MoccStruct extends MoccInv {
   @override
   MoccObj call(Interpreter interpreter, Arguments args) {
     final MoccObjectInstance instance = MoccObjectInstance(this);
+    final MoccFn? initializer = findMethod("new");
+    if (initializer != null) {
+      initializer.bind(instance).call(interpreter, args);
+    }
     return instance;
   }
 
@@ -161,7 +174,7 @@ class MoccObjectInstance extends MoccObj {
     }
 
     MoccFn? method = struct.findMethod(name.lexeme);
-    if (method != null) return method;
+    if (method != null) return method.bind(this);
 
     throw NameError(
       NameError.undefinedName(name.lexeme),
@@ -197,6 +210,7 @@ class Log extends MoccFn {
             MoccVoid,
           ),
           coreLibEnv,
+          false,
         );
 
   @override

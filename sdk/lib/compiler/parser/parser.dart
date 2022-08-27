@@ -376,6 +376,8 @@ class Parser extends CompileComponent {
       return Value(previous().literal);
     }
 
+    if (match([TokenType.THIS])) return ThisReference(previous());
+
     if (match([TokenType.IDENTIFIER])) {
       return VariableReference(previous());
     }
@@ -683,6 +685,14 @@ class GetExpression implements Expression {
       .newline("OF".indent(indent + 2))
       .indent(indent + 4)
       .newline(object.toTree(indent + 6));
+}
+
+class ThisReference implements Expression {
+  final Token keyword;
+  ThisReference(this.keyword);
+
+  @override
+  String toTree(int indent) => runtimeType.toString().indent(indent);
 }
 
 class SetExpression implements Expression {
