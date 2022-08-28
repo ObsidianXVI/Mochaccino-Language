@@ -80,6 +80,13 @@ class Parser extends CompileComponent {
 
   Statement parseStructDecl() {
     final Token name = consume(TokenType.IDENTIFIER, "Expected struct name.");
+    final VariableReference? superstruct;
+    if (match([TokenType.EXTENDS])) {
+      consume(TokenType.IDENTIFIER, "Expected superstruct name.");
+      superstruct = VariableReference(previous());
+    } else {
+      superstruct = null;
+    }
     consume(TokenType.LEFT_BRACE, "Expected '{' before struct body.");
 
     final List<FuncDecl> methods = [];
@@ -88,8 +95,7 @@ class Parser extends CompileComponent {
     }
 
     consume(TokenType.RIGHT_BRACE, "Expected '}' after struct body.");
-
-    return StructDecl(name, methods);
+    return StructDecl(name, methods, superstruct);
   }
 
   FuncDecl parseFuncDecl(String kind) {
@@ -376,6 +382,14 @@ class Parser extends CompileComponent {
       return Value(previous().literal);
     }
 
+    if (match([TokenType.SUPER])) {
+      final Token keyword = previous();
+      consume(TokenType.DOT, "Expected '.' after 'super'.");
+      final Token method =
+          consume(TokenType.IDENTIFIER, "Expected method name.");
+      return SuperReference(keyword, method);
+    }
+
     if (match([TokenType.THIS])) return ThisReference(previous());
 
     if (match([TokenType.IDENTIFIER])) {
@@ -571,12 +585,14 @@ class InitialiserStmt extends Statement {
 
 class StructDecl extends Statement {
   final Token name;
+  final VariableReference? superstruct;
   final List<FuncDecl> methods;
 
-  StructDecl(this.name, this.methods);
+  StructDecl(this.name, this.methods, this.superstruct);
 
   @override
-  String toTree(int indent) => "${runtimeType.toString()} ${name.lexeme}";
+  String toTree(int indent) => "${runtimeType.toString()} ${name.lexeme}"
+      .newline("extends: ${superstruct?.name ?? 'NONE'}".indent(indent + 2));
 }
 
 class OkStmt extends Statement {
@@ -711,6 +727,17 @@ class SetExpression implements Expression {
       .indent(indent + 2);
 }
 
+class SuperReference implements Expression {
+  final Token keyword;
+  final Token method;
+  SuperReference(this.keyword, this.method);
+
+  @override
+  String toTree(int indent) => "$runtimeType"
+      .indent(indent)
+      .newline("METHOD: ${method.lexeme}".indent(indent + 2));
+}
+
 abstract class BinaryExp implements Expression {
   final Expression leftOperand;
   final Operator op;
@@ -721,7 +748,18 @@ abstract class BinaryExp implements Expression {
 
 abstract class Operator implements Node {}
 
-abstract class Keyword implements Node {}
+abstract class Keyword implements Node {
+  final Token keyword;
+
+  Keyword(this.keyword);
+
+  @override
+  String toTree(int indent) => "KW: ${keyword.lexeme}".indent(indent);
+}
+
+class ExtendKeyword extends Keyword {
+  ExtendKeyword(super.keyword);
+}
 
 abstract class Literal implements Node {}
 

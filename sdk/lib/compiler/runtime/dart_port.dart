@@ -135,14 +135,17 @@ class MoccFn extends MoccInv {
 @PortedObject()
 class MoccStruct extends MoccInv {
   final String name;
+  final MoccStruct? superstruct;
   final Map<String, MoccFn> methods;
-  const MoccStruct(this.name, this.methods) : super(name);
+  const MoccStruct(this.name, this.superstruct, this.methods) : super(name);
 
   MoccFn? findMethod(String name) {
     if (methods.containsKey(name)) {
       return methods[name]!;
     } else {
-      return null;
+      if (superstruct != null) {
+        return superstruct!.findMethod(name);
+      }
     }
   }
 

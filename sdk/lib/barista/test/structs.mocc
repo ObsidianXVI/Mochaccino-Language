@@ -1,5 +1,18 @@
 struct Mocca {
-    func asyncDef() {
-        return "HEllo";
+    func new() {
+        log("working...");
+    }
+    func defo() {
+        log("DEFO");
     }
 }
+
+var m = Mocca();
+
+func bellow(msg) {
+    log(msg);
+}
+
+m.scream = bellow;
+m.scream("YEEE");
+m.defo();

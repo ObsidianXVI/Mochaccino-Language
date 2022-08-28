@@ -71,7 +71,27 @@ class Interpreter {
   }
 
   void interpretStructDecl(StructDecl stmt) {
+    Object? superstruct;
+    if (stmt.superstruct != null) {
+      superstruct = evaluateExpression(stmt.superstruct!);
+      if (superstruct is! MoccStruct) {
+        throw ReferenceError(
+          ReferenceError.nameIsWrongType(stmt.superstruct!.name.lexeme,
+              MoccStruct, superstruct.runtimeType),
+          lineNo: stmt.superstruct!.name.lineNo,
+          offendingLine: ErrorHandler.lines[stmt.superstruct!.name.lineNo],
+          start: stmt.superstruct!.name.start,
+          description:
+              "A struct can only inherit from another struct. Try changing the name of the superstruct to one that is actually a struct.",
+          source: Source.interpreter,
+        );
+      }
+    }
     environment.defineObject(stmt.name.lexeme, null);
+    if (stmt.superstruct != null) {
+      environment = Environment(environment);
+      environment.defineObject("super", superstruct);
+    }
     final Map<String, MoccFn> methods = {};
     for (FuncDecl method in stmt.methods) {
       MoccFn function =
@@ -79,7 +99,12 @@ class Interpreter {
       methods[method.name.lexeme] = function;
     }
 
-    final MoccStruct struct = MoccStruct(stmt.name.lexeme, methods);
+    final MoccStruct struct = MoccStruct(
+      stmt.name.lexeme,
+      superstruct != null ? superstruct as MoccStruct : null,
+      methods,
+    );
+    if (environment.outer != null) environment = environment.outer!;
     environment.redefineObject(stmt.name, struct);
   }
 
@@ -133,6 +158,27 @@ class Interpreter {
     }
 
     environment.defineObject(stmt.name.lexeme, value);
+  }
+
+  Object? interpretSuperReference(SuperReference expr) {
+    final int distance = locals[expr]!;
+    final MoccStruct superstruct =
+        environment.getAt(distance, "super") as MoccStruct;
+    final MoccObjectInstance object =
+        environment.getAt(distance - 1, "this") as MoccObjectInstance;
+    final MoccFn? method = superstruct.findMethod(expr.method.lexeme);
+    if (method == null) {
+      throw NameError(
+        NameError.undefinedName(expr.method.lexeme),
+        lineNo: expr.method.lineNo,
+        offendingLine: ErrorHandler.lines[expr.method.lineNo],
+        start: expr.method.start,
+        description:
+            "The method '${expr.method.lexeme}' is not defined in the superstruct.",
+        source: Source.interpreter,
+      );
+    }
+    return method.bind(object);
   }
 
   MoccObj interpretThisReference(ThisReference expr) {
@@ -228,6 +274,8 @@ class Interpreter {
       return interpretSetExpression(expr);
     } else if (expr is ThisReference) {
       return interpretThisReference(expr);
+    } else if (expr is SuperReference) {
+      return interpretSuperReference(expr);
     }
 
     return null;

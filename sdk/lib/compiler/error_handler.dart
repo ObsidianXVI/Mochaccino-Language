@@ -66,8 +66,10 @@ class SyntaxError extends Issue {
       "Field access can only be used on struct instances";
   static String invalidThisKeyword() =>
       "The 'this' keyword can only be used inside structs";
-  static String invaludReturnKeyword() =>
+  static String invalidReturnKeyword() =>
       "Return statements cannot be used in struct initialisers";
+  static String invalidSuperKeyword() =>
+      "The 'super' keyword cannot be used in this context";
 }
 
 class TypeError extends Issue {
@@ -97,6 +99,9 @@ class ReferenceError extends Issue {
   static String undefinedObject(String name) => "Name '$name' not defined";
   static String invalidAssignmentTarget(String name) =>
       "'$name' is an invalid assignment target";
+  static String nameIsWrongType(
+          String name, Type expectedType, Type givenType) =>
+      "'$name' should be <$expectedType> but <$givenType> was given instead";
 }
 
 class StackError extends Issue {
@@ -147,6 +152,8 @@ class NameError extends Issue {
       "The name '$name' can't be used in its own initialiser";
 
   static String undefinedName(String name) => "The name '$name' is not defined";
+  static String cannotInheritFromSelf(String name) =>
+      "The struct '$name' cannot inherit from itself";
 }
 
 abstract class StableException implements Exception {}

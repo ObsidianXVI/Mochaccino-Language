@@ -66,6 +66,7 @@ enum TokenType {
   GET,
   SET,
   THIS,
+  SUPER,
 
   // DEBUG FLAGS
   DEBUG_FLAG,
@@ -397,7 +398,7 @@ class Token {
       case '--':
         return UnaryPostfixSymbol.decrement;
       default:
-        throw new Exception(lexeme);
+        throw Exception(lexeme);
     }
   }
 }

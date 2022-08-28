@@ -3,6 +3,7 @@ part of mochaccino.sdk.compiler;
 enum StructType {
   none,
   struct,
+  substruct,
 }
 
 enum FunctionType {
@@ -55,6 +56,28 @@ class NameResolver {
     _currentStruct = StructType.struct;
     declare(stmt.name);
     define(stmt.name);
+    if (stmt.superstruct != null &&
+        stmt.name.lexeme == stmt.superstruct!.name.lexeme) {
+      throw NameError(
+        NameError.cannotInheritFromSelf(stmt.name.lexeme),
+        lineNo: stmt.name.lineNo,
+        offendingLine: ErrorHandler.lines[stmt.name.lineNo],
+        start: stmt.name.start,
+        description:
+            "A struct cannot inherit from itself, try changing the name of the superstruct or substruct. You could also use '_' to prefix the name of the substruct to ensure both names are as close to each other as possible.",
+        source: Source.analyser,
+      );
+    }
+    if (stmt.superstruct != null) {
+      _currentStruct = StructType.substruct;
+      resolveExpression(stmt.superstruct!);
+    }
+
+    if (stmt.superstruct != null) {
+      beginScope();
+      scopes.peek()["super"] = true;
+    }
+
     beginScope();
     scopes.peek()["this"] = true;
 
@@ -66,6 +89,7 @@ class NameResolver {
       resolveFunctionBody(method, funcType);
     }
     endScope();
+    if (stmt.superstruct != null) endScope();
     _currentStruct = enclosingStruct;
   }
 
@@ -87,7 +111,7 @@ class NameResolver {
       );
     } else if (_currentFunction == FunctionType.initialiser) {
       throw SyntaxError(
-        SyntaxError.invaludReturnKeyword(),
+        SyntaxError.invalidReturnKeyword(),
         lineNo: stmt.keyword.lineNo,
         offendingLine: ErrorHandler.lines[stmt.keyword.lineNo],
         start: stmt.keyword.start,
@@ -152,7 +176,34 @@ class NameResolver {
       resolveSetExpression(expr);
     } else if (expr is ThisReference) {
       resolveThisReference(expr);
+    } else if (expr is SuperReference) {
+      resolveSuperReference(expr);
     }
+  }
+
+  void resolveSuperReference(SuperReference expr) {
+    if (_currentStruct == StructType.none) {
+      throw SyntaxError(
+        SyntaxError.invalidSuperKeyword(),
+        lineNo: expr.keyword.lineNo,
+        offendingLine: ErrorHandler.lines[expr.keyword.lineNo],
+        start: expr.keyword.start,
+        description:
+            "The 'super' keyword can only be used in struct declarations, and only when it is inheriting from another struct.",
+        source: Source.analyser,
+      );
+    } else if (_currentStruct != StructType.substruct) {
+      throw SyntaxError(
+        SyntaxError.invalidSuperKeyword(),
+        lineNo: expr.keyword.lineNo,
+        offendingLine: ErrorHandler.lines[expr.keyword.lineNo],
+        start: expr.keyword.start,
+        description:
+            "The 'super' keyword can only be used when the struct inherits from another struct.",
+        source: Source.analyser,
+      );
+    }
+    resolveLocal(expr, expr.keyword);
   }
 
   void resolveThisReference(ThisReference expr) {
