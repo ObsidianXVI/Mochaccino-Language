@@ -29,7 +29,7 @@ abstract class Issue implements Exception {
     return """
 ${toString().replaceAll("Instance of '", '').replaceAll("'", '')}: $title
   $description
-  [$fileName:$lineNo]:
+  [$fileName:${lineNo + 1}]:
     ${lineNo + 1}| $offendingLine
 """;
   }

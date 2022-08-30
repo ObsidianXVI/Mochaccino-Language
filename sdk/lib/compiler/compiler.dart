@@ -45,7 +45,9 @@ class Compiler extends CompileComponent {
 
     final Interpreter interpreter = Interpreter(parser.parse(), compileJob);
     final NameResolver nameResolver = NameResolver(interpreter);
+    final TypeResolver typeResolver = TypeResolver(interpreter);
     nameResolver.resolve(interpreter.statements);
+    typeResolver.resolve(interpreter.statements);
     interpreter.interpret();
     return compileResult;
   }

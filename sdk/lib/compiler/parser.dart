@@ -42,6 +42,7 @@ class Parser extends CompileComponent {
 
       switch (peek().tokenType) {
         case TokenType.STRUCT:
+        case TokenType.COLLECTION:
         case TokenType.FUNC:
         case TokenType.VAR:
         case TokenType.FOR:
@@ -51,6 +52,7 @@ class Parser extends CompileComponent {
         case TokenType.OK:
         case TokenType.NOTOK:
         case TokenType.PROP:
+        case TokenType.PORT:
         case TokenType.INCLUDE:
         case TokenType.MODULE:
         case TokenType.STATIC:
@@ -133,15 +135,16 @@ class Parser extends CompileComponent {
 
     Expression initialiser = Value(null);
 
-    /* if (match([TokenType.ANGLED_LEFT]))
-      null; // type annotation `parseTypeAnnotation` */
-
+    final TypeAnnotation? typeAnnot = parseFullTypeAnnotation();
+    final InferredType inferredType = typeAnnot == null
+        ? InferredType(name, moccType: MoccDyn)
+        : InferredType(name, reference: typeAnnot);
     if (match([TokenType.EQUAL])) {
       initialiser = parseExpression();
     }
 
     consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
-    return InitialiserStmt(name, MoccDyn, initialiser);
+    return InitialiserStmt(name, inferredType, initialiser);
   }
 
   Statement parseStatement() {
@@ -152,6 +155,32 @@ class Parser extends CompileComponent {
     if (match([TokenType.OK])) return parseOkStmt();
     if (match([TokenType.LEFT_BRACE])) return BlockStmt(parseBlock());
     return parseExpressionStmt();
+  }
+
+  TypeAnnotation? parseFullTypeAnnotation() {
+    final TypeAnnotation? returnable;
+    if (match([TokenType.ANGLED_LEFT])) {
+      returnable = parseTypeAnnotation();
+      consume(
+          TokenType.ANGLED_RIGHT, "Closing '>' expected after type annotation");
+    } else {
+      returnable = null;
+    }
+    return returnable;
+  }
+
+  TypeAnnotation parseTypeAnnotation() {
+    // var x<map<K, V, T>, fn<void>, stream<f>> = ...
+    final Token name = consume(TokenType.IDENTIFIER, "Type name expected");
+    final List<TypeAnnotation> typeArgs = [];
+    if (match([TokenType.ANGLED_LEFT])) {
+      do {
+        typeArgs.add(parseTypeAnnotation());
+      } while (match([TokenType.COMMA]));
+      consume(
+          TokenType.ANGLED_RIGHT, "Closing '>' expected after type annotation");
+    }
+    return TypeAnnotation(name, typeArgs);
   }
 
   List<Statement> parseBlock() {
@@ -563,10 +592,10 @@ class ExpressionStmt extends Statement {
 
 class InitialiserStmt extends Statement {
   final Token name;
-  final Type objectType;
+  final InferredType inferredType;
   final Expression? initialiser;
 
-  InitialiserStmt(this.name, this.objectType, this.initialiser);
+  InitialiserStmt(this.name, this.inferredType, this.initialiser);
 
   @override
   String toTree(int indent) {
@@ -1013,4 +1042,38 @@ class Value implements Literal, Expression {
 
   @override
   String toString() => value.toString();
+}
+
+class TypeAnnotation extends Expression {
+  final Token name;
+  final List<TypeAnnotation> typeArgs;
+
+  TypeAnnotation(this.name, [this.typeArgs = const []]);
+
+  @override
+  String toTree(int indent) {
+    return "$runtimeType: ${name.lexeme}"
+        .indent(indent)
+        .newline("ARGS: ".indent(indent + 2))
+        .newline(typeArgs.map((e) => e.toTree(indent + 4)).join('\n'));
+  }
+}
+
+class InferredType extends Expression {
+  final Token name;
+  final TypeAnnotation? reference;
+  final Type? moccType;
+
+  InferredType(this.name, {this.reference, this.moccType});
+
+  dynamic get value => reference ?? moccType;
+
+  @override
+  String toTree(int indent) {
+    return "InferredType of ${name.lexeme}:"
+        .indent(indent)
+        .newline(
+            "annotation: ${reference?.toTree(indent + 2)}".indent(indent + 2))
+        .newline("literal: $moccType".indent(indent + 2));
+  }
 }

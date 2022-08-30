@@ -4,12 +4,12 @@ import 'package:mochaccino_sdk/barista/lib/interface/interface.dart';
 import './runtime/runtime.dart';
 import './runtime/moccTypes.dart';
 import './runtime/dart_port.dart';
+import './resolvers/resolver.dart';
 import 'dart:io';
 
 part './compiler.dart';
 part './tokeniser.dart';
-part './parser/parser.dart';
-part './parser/resolver.dart';
+part './parser.dart';
 part './interpreter.dart';
 part './error_handler.dart';
 

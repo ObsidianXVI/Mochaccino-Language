@@ -12,6 +12,7 @@ enum TokenType {
   DOT,
   MINUS,
   PLUS,
+  COLON,
   SEMICOLON,
   SLASH,
   STAR,
@@ -53,6 +54,7 @@ enum TokenType {
   STATIC,
   MODULE,
   STRUCT,
+  COLLECTION,
   FUNC,
   DOCK,
   EXTENDS,
@@ -161,6 +163,9 @@ class Tokeniser {
         break;
       case '+':
         addToken(TokenType.PLUS);
+        break;
+      case ':':
+        addToken(TokenType.COLON);
         break;
       case ';':
         addToken(TokenType.SEMICOLON);
@@ -419,6 +424,7 @@ Map<String, TokenType> keywords = {
   'static': TokenType.STATIC,
   'module:': TokenType.MODULE,
   'struct': TokenType.STRUCT,
+  'collection': TokenType.COLLECTION,
   'port': TokenType.PORT,
   'func': TokenType.FUNC,
   'dock': TokenType.DOCK,

@@ -1,17 +1,4 @@
-part of mochaccino.sdk.compiler;
-
-enum StructType {
-  none,
-  struct,
-  substruct,
-}
-
-enum FunctionType {
-  none,
-  function,
-  method,
-  initialiser,
-}
+part of mochaccino.sdk.compiler.resolver;
 
 class NameResolver {
   final Interpreter _interpreter;
@@ -319,16 +306,4 @@ class NameResolver {
   void beginScope() => scopes.push(<String, bool>{});
 
   void endScope() => scopes.pop();
-}
-
-class Stack<E> {
-  final List<E> stack = [];
-
-  bool get isEmpty => stack.isEmpty;
-  int get size => stack.length;
-
-  void push(E element) => stack.add(element);
-  E pop() => stack.removeLast();
-  E peek() => stack.last;
-  E get(int index) => stack[index];
 }

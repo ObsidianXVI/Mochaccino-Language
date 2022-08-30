@@ -5,6 +5,9 @@ import 'dart:io';
 import './commands/commands.dart';
 import './interface/interface.dart';
 
+export './commands/commands.dart';
+export './interface/interface.dart';
+
 void main(List<String> args) {
   if (args.isEmpty) {
     Interface.writeErr("Argument list is empty", Source.barista);
