@@ -1,3 +1,8 @@
 var a = 1;
 var b<int<x>> = 1;
-var c<map<K, V, T<stream<a>, future<T>>>> = 1;
+
+func bigInt(z, x)<void> {
+    log("HELLO" + z + x);
+}
+
+bigInt("A", "B");

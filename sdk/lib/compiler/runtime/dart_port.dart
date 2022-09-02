@@ -26,6 +26,17 @@ abstract class MoccObj extends MoccType {
 
   MoccType get objectType => this;
 
+  MoccBool get isTruthy {
+    if (runtimeType == MoccBool) return this as MoccBool;
+    if (runtimeType == MoccNull) return const MoccBool(false);
+    return const MoccBool(true);
+  }
+
+  MoccBool isEqualTo(MoccObj other) {
+    if (this == other) return const MoccBool(true);
+    return const MoccBool(false);
+  }
+
   MoccStr toMoccString() {
     if (this is Primitive) {
       return MoccStr(
@@ -128,7 +139,7 @@ class MoccFn extends MoccInv {
   @override
   MoccStr toMoccString() {
     return MoccStr(
-        "${declaration.name.lexeme}<fn<${declaration.returnType.asMoccType}>>");
+        "${declaration.name.lexeme}<fn<${declaration.returnType.asTypeAnnot}>>");
   }
 }
 
@@ -210,7 +221,7 @@ class Log extends MoccFn {
             Parameters(positionalArgs: [
               {'msg': MoccStr}
             ], namedArgs: {}),
-            MoccVoid,
+            InferredType(Token.magical('fn'), moccType: MoccVoid),
           ),
           coreLibEnv,
           false,

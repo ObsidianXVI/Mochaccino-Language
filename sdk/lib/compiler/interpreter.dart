@@ -152,7 +152,7 @@ class Interpreter {
   }
 
   void interpretInitialiserStmt(InitialiserStmt stmt) {
-    Object? value = null;
+    Object? value;
     if (stmt.initialiser != null) {
       value = evaluateExpression(stmt.initialiser!);
     }
@@ -160,7 +160,7 @@ class Interpreter {
     environment.defineObject(stmt.name.lexeme, value);
   }
 
-  Object? interpretSuperReference(SuperReference expr) {
+  MoccObj interpretSuperReference(SuperReference expr) {
     final int distance = locals[expr]!;
     final MoccStruct superstruct =
         environment.getAt(distance, "super") as MoccStruct;
@@ -189,7 +189,7 @@ class Interpreter {
     return lookupVariable(expr.name, expr);
   }
 
-  Object? interpretVarAssignment(VariableAssignment expr) {
+  MoccObj interpretVarAssignment(VariableAssignment expr) {
     Object? value = evaluateExpression(expr.value);
     final int? distance = locals[expr];
     if (distance != null) {
@@ -197,10 +197,10 @@ class Interpreter {
     } else {
       _global.redefineObject(expr.name, value);
     }
-    return value;
+    return value.toMoccObject();
   }
 
-  Object? interpretSetExpression(SetExpression expr) {
+  MoccObj interpretSetExpression(SetExpression expr) {
     Object? object = evaluateExpression(expr.object);
 
     if (object is! MoccObjectInstance) {
@@ -209,18 +209,19 @@ class Interpreter {
         lineNo: expr.name.lineNo,
         offendingLine: sourceLines[expr.name.lineNo],
         start: expr.name.start,
-        description: "description",
+        description:
+            "Property setters can only be used with struct instances, but '${expr.name}' is <${object.toMoccObject().runtimeType.asMoccType}>.",
         source: Source.interpreter,
       );
     }
 
     Object? value = evaluateExpression(expr.value);
     object.set(expr.name, value.toMoccObject());
-    return value;
+    return value.toMoccObject();
   }
 
-  Object? interpretGetExpression(GetExpression expr) {
-    final Object? object = evaluateExpression(expr.object);
+  MoccObj interpretGetExpression(GetExpression expr) {
+    final MoccObj object = evaluateExpression(expr.object);
     if (object is MoccObjectInstance) {
       return object.get(expr.name);
     }
@@ -231,7 +232,7 @@ class Interpreter {
       offendingLine: sourceLines[expr.name.lineNo],
       start: expr.name.start,
       description:
-          "Property access can only be performed on struct instances, but '${expr.name}' is not one.",
+          "Property access can only be performed on struct instances, but '${expr.name}' is <${object.toMoccObject().runtimeType.asMoccType}>.",
       source: Source.interpreter,
     );
   }
@@ -245,15 +246,15 @@ class Interpreter {
     Interface.writeLog("OK:${value.toMoccObject().innerValue}", Source.program);
   }
 
-  Object? interpretLiteral(Value value) {
+  MoccObj interpretLiteral(Value value) {
     return value.value;
   }
 
-  Object? interpretGroup(Group group) {
+  MoccObj interpretGroup(Group group) {
     return evaluateExpression(group.expression);
   }
 
-  Object? evaluateExpression(Expression expr) {
+  MoccObj evaluateExpression(Expression expr) {
     if (expr is BinaryExp) {
       return interpretBinary(expr);
     } else if (expr is UnaryExp) {
@@ -278,16 +279,23 @@ class Interpreter {
       return interpretSuperReference(expr);
     }
 
-    return null;
+    throw Exception(
+        "Unsupported expression '${expr.toString()}' cannot be interpreted");
   }
 
   bool isTruthy(Object? obj) {
+    if (obj is MoccObj) return obj.isTruthy.innerValue;
     if (obj == null) return false;
     if (obj is bool) return obj;
     return true;
   }
 
+  bool isString(Object? obj) => (obj is String || obj is MoccStr);
+
   bool isEqual(Object? left, Object? right) {
+    if (left is MoccObj && right is MoccObj) {
+      return left.isEqualTo(right).innerValue;
+    }
     if (left == null && right == null) return true;
     if (left == null) return false;
 
@@ -295,6 +303,7 @@ class Interpreter {
   }
 
   void checkBooleanOperand(dynamic op, Object? operand, Token token) {
+    if (operand is MoccBool) return;
     if (operand is bool) return;
     throw TypeError(
       TypeError.operationTypeError(token.lexeme, bool, operand.runtimeType),
@@ -308,6 +317,7 @@ class Interpreter {
   }
 
   void checkNumberOperand(dynamic op, Object? operand, Token token) {
+    if (operand is MoccDbl) return;
     if (operand is double) return;
     throw TypeError(
       TypeError.operationTypeError(token.lexeme, double, operand.runtimeType),
@@ -322,6 +332,7 @@ class Interpreter {
 
   void checkNumberOperands(
       dynamic op, Object? leftOperand, Object? rightOperand, Token token) {
+    if (leftOperand is MoccDbl && rightOperand is MoccDbl) return;
     if (leftOperand is double && rightOperand is double) return;
     if (leftOperand is! double) {
       throw TypeError(
@@ -354,72 +365,74 @@ class Interpreter {
     }
   }
 
-  Object? interpretUnary(UnaryExp expr) {
+  MoccObj interpretUnary(UnaryExp expr) {
     Object? value = evaluateExpression(expr.value);
 
     switch (expr.unaryPrefix.symbol) {
       case UnaryPrefixSymbol.minus:
         checkNumberOperand(expr.unaryPrefix.symbol, value, expr.unaryPrefix.op);
-        return -(int.parse(value.toString()));
+        return MoccDbl(-(double.parse(value.toString())));
       case UnaryPrefixSymbol.bang:
         checkBooleanOperand(
             expr.unaryPrefix.symbol, value, expr.unaryPrefix.op);
-        return !(isTruthy(value));
+        return MoccBool(!isTruthy(value));
     }
   }
 
-  Object? interpretBinary(BinaryExp expr) {
+  MoccObj interpretBinary(BinaryExp expr) {
     Object? left = evaluateExpression(expr.leftOperand);
     Object? right = evaluateExpression(expr.rightOperand);
     if (expr is EqualityExp) {
       switch (expr.op.symbol) {
         case EqualitySymbol.isEqual:
-          return isEqual(left, right);
+          return MoccBool(isEqual(left, right));
         case EqualitySymbol.isNotEqual:
-          return !isEqual(left, right);
+          return MoccBool(!isEqual(left, right));
       }
     } else if (expr is LogicalExp) {
       switch (expr.op.symbol) {
         case LogicalSymbol.and:
           checkBooleanOperand(expr.op.symbol, left, expr.op.op);
           checkBooleanOperand(expr.op.symbol, right, expr.op.op);
-          return (left as bool) && (right as bool);
+          return MoccBool((left as bool) && (right as bool));
         case LogicalSymbol.or:
           checkBooleanOperand(expr.op.symbol, left, expr.op.op);
           checkBooleanOperand(expr.op.symbol, right, expr.op.op);
-          return (left as bool) || (right as bool);
+          return MoccBool((left as bool) || (right as bool));
       }
     } else if (expr is ComparativeExp) {
       switch (expr.op.symbol) {
         case ComparativeSymbol.greaterThan:
           checkNumberOperands(expr.op, left, right, expr.op.op);
-          return (left as double) > (right as double);
+          return MoccBool((left as double) > (right as double));
         case ComparativeSymbol.greaterThanEqual:
           checkNumberOperands(expr.op, left, right, expr.op.op);
-          return (left as double) >= (right as double);
+          return MoccBool((left as double) >= (right as double));
         case ComparativeSymbol.lessThan:
           checkNumberOperands(expr.op, left, right, expr.op.op);
-          return (left as double) < (right as double);
+          return MoccBool((left as double) < (right as double));
         case ComparativeSymbol.lessThanEqual:
           checkNumberOperands(expr.op, left, right, expr.op.op);
-          return (left as double) <= (right as double);
+          return MoccBool((left as double) <= (right as double));
       }
     } else if (expr is ArithmeticExp) {
       switch (expr.op.symbol) {
         case ArithmeticSymbol.minus:
           checkNumberOperands(expr.op, left, right, expr.op.op);
-          return (left as double) - (right as double);
+          return MoccDbl((left as double) - (right as double));
         case ArithmeticSymbol.divide:
           checkNumberOperands(expr.op, left, right, expr.op.op);
-          return (left as double) / (right as double);
+          return MoccDbl((left as double) / (right as double));
         case ArithmeticSymbol.star:
           checkNumberOperands(expr.op, left, right, expr.op.op);
-          return (left as double) * (right as double);
+          return MoccDbl((left as double) * (right as double));
         case ArithmeticSymbol.plus:
           if ((left is double) && (right is double)) {
-            return left + right;
-          } else if (left is String && right is String) {
-            return left + right;
+            return MoccDbl(left + right);
+          } else if (left is MoccStr && right is MoccStr) {
+            return MoccStr(
+              (left.innerValue as String) + (right.innerValue as String),
+            );
           } else {
             if (left is double) {
               throw TypeError(
@@ -453,10 +466,10 @@ class Interpreter {
           }
       }
     }
-    return null;
+    return const MoccNull();
   }
 
-  Object? interpretInvocationExpression(InvocationExpression invocation) {
+  MoccObj interpretInvocationExpression(InvocationExpression invocation) {
     Object? callee = evaluateExpression(invocation.callee);
     final List<MoccObj> arguments = [];
     for (Expression argument in invocation.arguments) {

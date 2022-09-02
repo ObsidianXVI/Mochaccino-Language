@@ -366,6 +366,14 @@ class Token {
     this.literal,
   });
 
+  Token.magical(
+    this.lexeme, [
+    this.tokenType = TokenType.EOF,
+    this.literal = '',
+    this.lineNo = 0,
+    this.start = 0,
+  ]);
+
   @override
   String toString() =>
       "'$lexeme': $tokenType ${literal ?? ''} [$lineNo:$start]";
@@ -408,7 +416,7 @@ class Token {
   }
 }
 
-Map<String, TokenType> keywords = {
+final Map<String, TokenType> keywords = {
   'ok': TokenType.OK,
   'notok': TokenType.NOTOK,
   'named': TokenType.NAMED,

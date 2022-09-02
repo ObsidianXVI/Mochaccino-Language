@@ -70,6 +70,9 @@ class SyntaxError extends Issue {
       "Return statements cannot be used in struct initialisers";
   static String invalidSuperKeyword() =>
       "The 'super' keyword cannot be used in this context";
+  static String typeAnnotationExpected() => "Expected a type annotation";
+  static String unsupportedSyntax() =>
+      "Syntax is not supported in current version of Mochaccino";
 }
 
 class TypeError extends Issue {

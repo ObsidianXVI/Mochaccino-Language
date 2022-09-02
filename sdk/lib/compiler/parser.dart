@@ -125,15 +125,29 @@ class Parser extends CompileComponent {
       } while (match([TokenType.COMMA]));
     }
     consume(TokenType.RIGHT_PAREN, "Expected ')' after parameter list.");
+    final TypeAnnotation? typeAnnot = parseFullTypeAnnotation();
+    if (typeAnnot == null) {
+      final Token currentTok = peek();
+      throw SyntaxError(
+        SyntaxError.typeAnnotationExpected(),
+        lineNo: currentTok.lineNo,
+        offendingLine: ErrorHandler.lines[currentTok.lineNo],
+        start: currentTok.start,
+        description:
+            "Expected a type annotation to specify the function's return type. Try adding '<void>' if the function does not return anything, or returns null.",
+        source: Source.parser,
+      );
+    }
+    final InferredType inferredType = InferredType(name, reference: typeAnnot);
     consume(TokenType.LEFT_BRACE, "Expected '{' before $kind body.");
     final List<Statement> body = parseBlock();
-    return FuncDecl(name, parameters, body);
+    return FuncDecl(name, parameters, body, inferredType);
   }
 
   Statement parseVarDecl() {
     Token name = consume(TokenType.IDENTIFIER, "Expected an identifier");
 
-    Expression initialiser = Value(null);
+    Expression initialiser = Value(const MoccNull());
 
     final TypeAnnotation? typeAnnot = parseFullTypeAnnotation();
     final InferredType inferredType = typeAnnot == null
@@ -218,13 +232,13 @@ class Parser extends CompileComponent {
     } else {
       initializer = parseExpressionStmt();
     }
-    Expression? condition = null;
+    Expression? condition;
     if (!check(TokenType.SEMICOLON)) {
       condition = parseExpression();
     }
     consume(TokenType.SEMICOLON, "Expected ';' after loop condition.");
 
-    Expression? increment = null;
+    Expression? increment;
     if (!check(TokenType.RIGHT_PAREN)) {
       increment = parseExpression();
     }
@@ -233,7 +247,7 @@ class Parser extends CompileComponent {
     if (increment != null) {
       body = BlockStmt(([body, ExpressionStmt(increment)]));
     }
-    condition ??= Value(true);
+    condition ??= Value(const MoccBool(true));
     body = WhileStmt(condition, body);
     if (initializer != null) {
       body = BlockStmt([initializer, body]);
@@ -384,7 +398,7 @@ class Parser extends CompileComponent {
     }
 
     Token paren = consume(
-        TokenType.RIGHT_PAREN, "Expect ')' after arguments in invocation.");
+        TokenType.RIGHT_PAREN, "Expected ')' after arguments in invocation.");
 
     if (arguments.length > 200) {
       ErrorHandler.issues.add(
@@ -402,13 +416,18 @@ class Parser extends CompileComponent {
   }
 
   Expression parseValue() {
-    if (match([TokenType.FALSE])) return Value(false);
-    if (match([TokenType.TRUE])) return Value(true);
+    if (match([TokenType.FALSE])) return Value(const MoccBool(false));
+    if (match([TokenType.TRUE])) return Value(const MoccBool(true));
 
-    if (match([TokenType.NULL])) return Value(null);
+    if (match([TokenType.NULL])) return Value(const MoccNull());
 
     if (match([TokenType.NUMBER, TokenType.STRING])) {
-      return Value(previous().literal);
+      final Object? literal = previous().literal;
+      if (literal is num) {
+        return Value(MoccDbl(double.parse(literal.toString())));
+      } else if (literal is String) {
+        return Value(MoccStr(literal.toString()));
+      }
     }
 
     if (match([TokenType.SUPER])) {
@@ -429,10 +448,6 @@ class Parser extends CompileComponent {
       Expression expr = parseExpression();
       consume(TokenType.RIGHT_PAREN, ')');
       return Group(expr);
-    }
-
-    if (match([TokenType.ANGLED_LEFT])) {
-      print('fouund: ${previous().lexeme}');
     }
 
     throw SyntaxError(
@@ -607,7 +622,7 @@ class InitialiserStmt extends Statement {
         .newline(
           initialiser != null
               ? initialiser!.toTree(indent + 4)
-              : Value(null).toTree(indent + 4),
+              : Value(const MoccNull()).toTree(indent + 4),
         );
   }
 }
@@ -642,20 +657,13 @@ class FuncDecl extends Statement {
   late List<Token> params;
   late Parameters parameters;
   late List<Statement> body;
-  late Type returnType;
+  final InferredType returnType;
 
-  FuncDecl(this.name, this.params, this.body) {
+  FuncDecl(this.name, this.params, this.body, this.returnType) {
     parameters = Parameters(
       positionalArgs: params.map((e) => {e.lexeme: MoccDyn}).toList(),
       namedArgs: const {},
     );
-    if (body.isNotEmpty) {
-      if (body.last is ReturnStmt) {
-        returnType = (body.last as ReturnStmt).value.toMoccObject().runtimeType;
-      } else {
-        returnType = MoccVoid;
-      }
-    }
   }
 
   FuncDecl.portedFn(String name, this.parameters, this.returnType) {
@@ -1030,7 +1038,7 @@ class UnaryPrefixOp implements Operator {
 }
 
 class Value implements Literal, Expression {
-  final dynamic value;
+  final MoccObj value;
 
   Value(this.value);
 
@@ -1051,6 +1059,17 @@ class TypeAnnotation extends Expression {
   TypeAnnotation(this.name, [this.typeArgs = const []]);
 
   @override
+  String toString() {
+    if (typeArgs.isEmpty) {
+      return name.lexeme;
+    } else {
+      final String typeArgsStrings =
+          typeArgs.map((e) => e.toString()).toList().join(', ');
+      return "${name.lexeme}<$typeArgsStrings>";
+    }
+  }
+
+  @override
   String toTree(int indent) {
     return "$runtimeType: ${name.lexeme}"
         .indent(indent)
@@ -1067,6 +1086,10 @@ class InferredType extends Expression {
   InferredType(this.name, {this.reference, this.moccType});
 
   dynamic get value => reference ?? moccType;
+
+  String get asTypeAnnot => moccType == null
+      ? name.lexeme + reference.toString()
+      : name.lexeme + moccType.runtimeType.asMoccType;
 
   @override
   String toTree(int indent) {
